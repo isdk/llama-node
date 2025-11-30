@@ -1,17 +1,17 @@
 import path from "path";
 import fs from "fs-extra";
-import ignore, {Ignore} from "ignore";
+import ignore, { Ignore } from "ignore";
 import {
     getProjectTemplateParameterText, PackagedFileEntry, ProjectTemplate, ProjectTemplateParameter
 } from "../src/cli/utils/projectTemplates.js";
-import {packedProjectTemplatesDirectory, projectTemplatesDirectory} from "../src/config.js";
+import { packedProjectTemplatesDirectory, projectTemplatesDirectory } from "../src/config.js";
 
 const packedTemplatedDirectoryName = path.basename(packedProjectTemplatesDirectory);
 
 async function packTemplates() {
     await fs.ensureDir(packedProjectTemplatesDirectory);
 
-    for (const item of await fs.readdir(projectTemplatesDirectory, {withFileTypes: true})) {
+    for (const item of await fs.readdir(projectTemplatesDirectory, { withFileTypes: true })) {
         if (!item.isDirectory())
             continue;
 
@@ -50,7 +50,7 @@ async function packDirectory({
     currentPath: string[],
     templateDirectory: string
 }) {
-    for (const item of await fs.readdir(path.join(templateDirectory, ...currentPath), {withFileTypes: true})) {
+    for (const item of await fs.readdir(path.join(templateDirectory, ...currentPath), { withFileTypes: true })) {
         const packItemPath = [...currentPath, item.name];
         const itemPath = path.join(templateDirectory, ...packItemPath);
 
@@ -81,7 +81,7 @@ async function clearPackedTemplates() {
 function transformPackedItem(item: PackagedFileEntry) {
     if (item.path.length === 1 && item.path[0] === "package.json") {
         const packageJson = JSON.parse(item.content);
-        const moduleName = "node-llama-cpp";
+        const moduleName = "@isdk/llama-node";
 
         if (packageJson.dependencies?.[moduleName])
             packageJson.dependencies[moduleName] =
@@ -105,7 +105,7 @@ function transformPackedItem(item: PackagedFileEntry) {
     }
 }
 
-export {};
+export { };
 
 await clearPackedTemplates();
 await packTemplates();

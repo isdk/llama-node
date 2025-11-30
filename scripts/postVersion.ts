@@ -1,5 +1,5 @@
 import path from "path";
-import {fileURLToPath} from "url";
+import { fileURLToPath } from "url";
 import fs from "fs-extra";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -10,7 +10,7 @@ const currentVersion = packageJson.version;
 
 if (packageJson.optionalDependencies != null) {
     for (const packageName of Object.keys(packageJson.optionalDependencies)) {
-        if (!packageName.startsWith("@node-llama-cpp/"))
+        if (!packageName.startsWith("@isdk/llama-node-"))
             continue;
 
         console.info(`Updating optional dependency "${packageName}" to version "${currentVersion}"`);
