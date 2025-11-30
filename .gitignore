@@ -3,6 +3,7 @@
 node_modules
 .DS_Store
 *.cpuprofile
+.npmrc
 
 /dist
 /docs-site
