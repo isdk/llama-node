@@ -1,0 +1,9 @@
+packages:
+  - packages/*
+  - packages/prebuilt-llama-node/*
+
+onlyBuiltDependencies:
+  - electron
+  - esbuild
+  - sharp
+  - unrs-resolver
