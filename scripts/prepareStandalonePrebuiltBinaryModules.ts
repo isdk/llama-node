@@ -5,8 +5,7 @@ import {$, cd} from "zx";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const packageDirectory = path.join(__dirname, "..", "packages");
-const packageScope = "@node-llama-cpp";
-const subPackagesDirectory = path.join(packageDirectory, packageScope);
+const subPackagesDirectory = path.join(packageDirectory, "prebuilt-llama-node");
 
 for (const packageName of await fs.readdir(subPackagesDirectory)) {
     const packagePath = path.join(subPackagesDirectory, packageName);
