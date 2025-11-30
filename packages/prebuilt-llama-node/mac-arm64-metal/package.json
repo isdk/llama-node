@@ -1,7 +1,7 @@
 {
-  "name": "@node-llama-cpp/linux-x64",
+  "name": "@isdk/llama-node-mac-arm64-metal",
   "version": "0.1.0",
-  "description": "Prebuilt binary for node-llama-cpp for Linux x64",
+  "description": "Prebuilt binary for node-llama-cpp for macOS arm64 with Metal support",
   "main": "dist/index.js",
   "type": "module",
   "files": [
@@ -21,9 +21,8 @@
   "engines": {
     "node": ">=20.0.0"
   },
-  "os": ["linux"],
-  "cpu": ["x64"],
-  "libc": ["glibc"],
+  "os": ["darwin"],
+  "cpu": ["arm64", "x64"],
   "scripts": {
     "prebuild": "rimraf ./dist ./tsconfig.tsbuildinfo",
     "build": "tsc --build tsconfig.json --force",

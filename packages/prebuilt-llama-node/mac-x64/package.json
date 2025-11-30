@@ -1,7 +1,7 @@
 {
-  "name": "@node-llama-cpp/win-x64-vulkan",
+  "name": "@isdk/llama-node-mac-x64",
   "version": "0.1.0",
-  "description": "Prebuilt binary for node-llama-cpp for Windows x64 with Vulkan support",
+  "description": "Prebuilt binary for node-llama-cpp for macOS x64",
   "main": "dist/index.js",
   "type": "module",
   "files": [
@@ -21,7 +21,7 @@
   "engines": {
     "node": ">=20.0.0"
   },
-  "os": ["win32"],
+  "os": ["darwin"],
   "cpu": ["x64"],
   "scripts": {
     "prebuild": "rimraf ./dist ./tsconfig.tsbuildinfo",
