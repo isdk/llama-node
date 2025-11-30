@@ -1,9 +1,9 @@
 import path from "node:path";
 import fs from "node:fs/promises";
-import {BrowserWindow, dialog} from "electron";
-import {createElectronSideBirpc} from "../utils/createElectronSideBirpc.ts";
-import {llmFunctions, llmState} from "../state/llmState.ts";
-import type {RenderedFunctions} from "../../src/rpc/llmRpc.ts";
+import { BrowserWindow, dialog } from "electron";
+import { createElectronSideBirpc } from "../utils/createElectronSideBirpc.ts";
+import { llmFunctions, llmState } from "../state/llmState.ts";
+import type { RenderedFunctions } from "../../src/rpc/llmRpc.ts";
 
 const modelDirectoryPath = path.join(process.cwd(), "models");
 
@@ -16,7 +16,7 @@ export class ElectronLlmRpc {
                 message: "Select a model file",
                 title: "Select a model file",
                 filters: [
-                    {name: "Model file", extensions: ["gguf"]}
+                    { name: "Model file", extensions: ["gguf"] }
                 ],
                 buttonLabel: "Open",
                 defaultPath: await pathExists(modelDirectoryPath)
@@ -32,11 +32,8 @@ export class ElectronLlmRpc {
                     chatSession: {
                         loaded: false,
                         generatingResult: false,
-                        simplifiedChat: [],
-                        draftPrompt: {
-                            prompt: llmState.state.chatSession.draftPrompt.prompt,
-                            completion: ""
-                        }
+                        chatHistory: [],
+                        draftPrompt: ""
                     }
                 };
 

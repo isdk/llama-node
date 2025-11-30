@@ -1,11 +1,9 @@
 import path from "node:path";
 import {
-    getLlama, Llama, LlamaChatSession, LlamaChatSessionPromptCompletionEngine, LlamaContext, LlamaContextSequence, LlamaModel,
-    isChatModelResponseSegment, type ChatModelSegmentType
-} from "node-llama-cpp";
-import {withLock, State} from "lifecycle-utils";
+    getLlama, Llama, LlamaCompletion, LlamaContext, LlamaContextSequence, LlamaModel
+} from "@isdk/llama-node";
+import { withLock, State } from "lifecycle-utils";
 import packageJson from "../../package.json";
-import {modelFunctions} from "../llm/modelFunctions.js";
 
 export const llmState = new State<LlmState>({
     appVersion: packageJson.version,
@@ -24,11 +22,8 @@ export const llmState = new State<LlmState>({
     chatSession: {
         loaded: false,
         generatingResult: false,
-        simplifiedChat: [],
-        draftPrompt: {
-            prompt: "",
-            completion: ""
-        }
+        chatHistory: [],
+        draftPrompt: ""
     }
 });
 
@@ -56,42 +51,45 @@ export type LlmState = {
     chatSession: {
         loaded: boolean,
         generatingResult: boolean,
-        simplifiedChat: SimplifiedChatItem[],
-        draftPrompt: {
-            prompt: string,
-            completion: string
-        }
+        chatHistory: ChatMessage[],
+        draftPrompt: string
     }
 };
 
-export type SimplifiedChatItem = SimplifiedUserChatItem | SimplifiedModelChatItem;
-export type SimplifiedUserChatItem = {
-    type: "user",
-    message: string
-};
-export type SimplifiedModelChatItem = {
-    type: "model",
-    message: Array<{
-        type: "text",
-        text: string
-    } | {
-        type: "segment",
-        segmentType: ChatModelSegmentType,
-        text: string,
-        startTime?: string,
-        endTime?: string
-    }>
+export type ChatMessage = {
+    role: "user" | "assistant",
+    content: string
 };
 
 let llama: Llama | null = null;
 let model: LlamaModel | null = null;
 let context: LlamaContext | null = null;
 let contextSequence: LlamaContextSequence | null = null;
-
-let chatSession: LlamaChatSession | null = null;
-let chatSessionCompletionEngine: LlamaChatSessionPromptCompletionEngine | null = null;
+let completion: LlamaCompletion | null = null;
 let promptAbortController: AbortController | null = null;
-let inProgressResponse: SimplifiedModelChatItem["message"] = [];
+
+// Simple chat template formatting
+function formatChatPrompt(history: ChatMessage[], newMessage?: string): string {
+    const messages = newMessage
+        ? [...history, { role: "user" as const, content: newMessage }]
+        : history;
+
+    // Simple chat format - can be customized based on model
+    let prompt = "";
+    for (const msg of messages) {
+        if (msg.role === "user") {
+            prompt += `User: ${msg.content}\n`;
+        } else {
+            prompt += `Assistant: ${msg.content}\n`;
+        }
+    }
+
+    if (newMessage) {
+        prompt += "Assistant: ";
+    }
+
+    return prompt;
+}
 
 export const llmFunctions = {
     async loadLlama() {
@@ -108,19 +106,19 @@ export const llmFunctions = {
             try {
                 llmState.state = {
                     ...llmState.state,
-                    llama: {loaded: false}
+                    llama: { loaded: false }
                 };
 
                 llama = await getLlama();
                 llmState.state = {
                     ...llmState.state,
-                    llama: {loaded: true}
+                    llama: { loaded: true }
                 };
 
                 llama.onDispose.createListener(() => {
                     llmState.state = {
                         ...llmState.state,
-                        llama: {loaded: false}
+                        llama: { loaded: false }
                     };
                 });
             } catch (err) {
@@ -182,7 +180,7 @@ export const llmFunctions = {
                 model.onDispose.createListener(() => {
                     llmState.state = {
                         ...llmState.state,
-                        model: {loaded: false}
+                        model: { loaded: false }
                     };
                 });
             } catch (err) {
@@ -214,19 +212,21 @@ export const llmFunctions = {
             try {
                 llmState.state = {
                     ...llmState.state,
-                    context: {loaded: false}
+                    context: { loaded: false }
                 };
 
-                context = await model.createContext();
+                context = await model.createContext({
+                    contextSize: 4096
+                });
                 llmState.state = {
                     ...llmState.state,
-                    context: {loaded: true}
+                    context: { loaded: true }
                 };
 
                 context.onDispose.createListener(() => {
                     llmState.state = {
                         ...llmState.state,
-                        context: {loaded: false}
+                        context: { loaded: false }
                     };
                 });
             } catch (err) {
@@ -249,19 +249,19 @@ export const llmFunctions = {
             try {
                 llmState.state = {
                     ...llmState.state,
-                    contextSequence: {loaded: false}
+                    contextSequence: { loaded: false }
                 };
 
                 contextSequence = context.getSequence();
                 llmState.state = {
                     ...llmState.state,
-                    contextSequence: {loaded: true}
+                    contextSequence: { loaded: true }
                 };
 
                 contextSequence.onDispose.createListener(() => {
                     llmState.state = {
                         ...llmState.state,
-                        contextSequence: {loaded: false}
+                        contextSequence: { loaded: false }
                     };
                 });
             } catch (err) {
@@ -282,38 +282,21 @@ export const llmFunctions = {
                 if (contextSequence == null)
                     throw new Error("Context sequence not loaded");
 
-                if (chatSession != null) {
-                    try {
-                        chatSession.dispose();
-                        chatSession = null;
-                        chatSessionCompletionEngine = null;
-                    } catch (err) {
-                        console.error("Failed to dispose chat session", err);
-                    }
-                }
-
                 try {
                     llmState.state = {
                         ...llmState.state,
                         chatSession: {
                             loaded: false,
                             generatingResult: false,
-                            simplifiedChat: [],
-                            draftPrompt: llmState.state.chatSession.draftPrompt
+                            chatHistory: [],
+                            draftPrompt: ""
                         }
                     };
 
-                    llmFunctions.chatSession.resetChatHistory(false);
-
-                    try {
-                        await chatSession?.preloadPrompt("", {
-                            functions: modelFunctions, // these won't be called, but are used to avoid redundant context shifts
-                            signal: promptAbortController?.signal
-                        });
-                    } catch (err) {
-                        // do nothing
-                    }
-                    chatSessionCompletionEngine?.complete(llmState.state.chatSession.draftPrompt.prompt);
+                    // Create completion instance
+                    completion = new LlamaCompletion({
+                        contextSequence
+                    });
 
                     llmState.state = {
                         ...llmState.state,
@@ -329,8 +312,8 @@ export const llmFunctions = {
                         chatSession: {
                             loaded: false,
                             generatingResult: false,
-                            simplifiedChat: [],
-                            draftPrompt: llmState.state.chatSession.draftPrompt
+                            chatHistory: [],
+                            draftPrompt: ""
                         }
                     };
                 }
@@ -338,7 +321,7 @@ export const llmFunctions = {
         },
         async prompt(message: string) {
             await withLock([llmFunctions, "chatSession"], async () => {
-                if (chatSession == null)
+                if (completion == null)
                     throw new Error("Chat session not loaded");
 
                 llmState.state = {
@@ -346,244 +329,100 @@ export const llmFunctions = {
                     chatSession: {
                         ...llmState.state.chatSession,
                         generatingResult: true,
-                        draftPrompt: {
-                            prompt: "",
-                            completion: ""
-                        }
+                        draftPrompt: ""
                     }
                 };
                 promptAbortController = new AbortController();
+
+                // Add user message to history
+                const newHistory: ChatMessage[] = [
+                    ...llmState.state.chatSession.chatHistory,
+                    { role: "user", content: message }
+                ];
 
                 llmState.state = {
                     ...llmState.state,
                     chatSession: {
                         ...llmState.state.chatSession,
-                        simplifiedChat: getSimplifiedChatHistory(true, message)
+                        chatHistory: newHistory
                     }
                 };
 
                 const abortSignal = promptAbortController.signal;
-                try {
-                    await chatSession.prompt(message, {
-                        signal: abortSignal,
-                        stopOnAbortSignal: true,
-                        functions: modelFunctions,
-                        onResponseChunk(chunk) {
-                            inProgressResponse = squashMessageIntoModelChatMessages(
-                                inProgressResponse,
-                                (chunk.type == null || chunk.segmentType == null)
-                                    ? {
-                                        type: "text",
-                                        text: chunk.text
-                                    }
-                                    : {
-                                        type: "segment",
-                                        segmentType: chunk.segmentType,
-                                        text: chunk.text,
-                                        startTime: chunk.segmentStartTime?.toISOString(),
-                                        endTime: chunk.segmentEndTime?.toISOString()
-                                    }
-                            );
+                let assistantResponse = "";
 
+                try {
+                    // Format the prompt with chat history
+                    const prompt = formatChatPrompt(llmState.state.chatSession.chatHistory);
+
+                    // Generate completion with streaming
+                    for await (const chunk of completion.generateCompletionWithMeta({
+                        prompt,
+                        maxTokens: 512,
+                        temperature: 0.7,
+                        signal: abortSignal,
+                        onTextChunk(text: string) {
+                            assistantResponse += text;
+
+                            // Update state with partial response
                             llmState.state = {
                                 ...llmState.state,
                                 chatSession: {
                                     ...llmState.state.chatSession,
-                                    simplifiedChat: getSimplifiedChatHistory(true, message)
+                                    chatHistory: [
+                                        ...newHistory,
+                                        { role: "assistant", content: assistantResponse }
+                                    ]
                                 }
                             };
                         }
-                    });
+                    })) {
+                        // Streaming handled by onTextChunk
+                    }
                 } catch (err) {
-                    if (err !== abortSignal.reason)
-                        throw err;
-
-                    // if the prompt was aborted before the generation even started, we ignore the error
+                    if (err !== abortSignal.reason) {
+                        console.error("Generation error:", err);
+                        // Keep partial response if available
+                    }
                 }
+
+                // Finalize with complete response
+                const finalHistory: ChatMessage[] = assistantResponse
+                    ? [...newHistory, { role: "assistant", content: assistantResponse }]
+                    : newHistory;
 
                 llmState.state = {
                     ...llmState.state,
                     chatSession: {
                         ...llmState.state.chatSession,
                         generatingResult: false,
-                        simplifiedChat: getSimplifiedChatHistory(false),
-                        draftPrompt: {
-                            ...llmState.state.chatSession.draftPrompt,
-                            completion:
-                                chatSessionCompletionEngine?.complete(llmState.state.chatSession.draftPrompt.prompt)?.trimStart() ?? ""
-                        }
+                        chatHistory: finalHistory,
+                        draftPrompt: ""
                     }
                 };
-                inProgressResponse = [];
             });
         },
         stopActivePrompt() {
             promptAbortController?.abort();
         },
-        resetChatHistory(markAsLoaded: boolean = true) {
-            if (contextSequence == null)
-                return;
-
-            chatSession?.dispose();
-            chatSession = new LlamaChatSession({
-                contextSequence,
-                autoDisposeSequence: false
-            });
-            chatSessionCompletionEngine = chatSession.createPromptCompletionEngine({
-                functions: modelFunctions, // these won't be called, but are used to avoid redundant context shifts
-                onGeneration(prompt, completion) {
-                    if (llmState.state.chatSession.draftPrompt.prompt === prompt) {
-                        llmState.state = {
-                            ...llmState.state,
-                            chatSession: {
-                                ...llmState.state.chatSession,
-                                draftPrompt: {
-                                    prompt,
-                                    completion: completion.trimStart()
-                                }
-                            }
-                        };
-                    }
-                }
-            });
-
-            llmState.state = {
-                ...llmState.state,
-                chatSession: {
-                    loaded: markAsLoaded
-                        ? true
-                        : llmState.state.chatSession.loaded,
-                    generatingResult: false,
-                    simplifiedChat: [],
-                    draftPrompt: {
-                        prompt: llmState.state.chatSession.draftPrompt.prompt,
-                        completion: chatSessionCompletionEngine.complete(llmState.state.chatSession.draftPrompt.prompt)?.trimStart() ?? ""
-                    }
-                }
-            };
-
-            chatSession.onDispose.createListener(() => {
-                chatSessionCompletionEngine = null;
-                promptAbortController = null;
-                llmState.state = {
-                    ...llmState.state,
-                    chatSession: {
-                        loaded: false,
-                        generatingResult: false,
-                        simplifiedChat: [],
-                        draftPrompt: llmState.state.chatSession.draftPrompt
-                    }
-                };
-            });
-        },
-        setDraftPrompt(prompt: string) {
-            if (chatSessionCompletionEngine == null)
-                return;
-
+        resetChatHistory() {
             llmState.state = {
                 ...llmState.state,
                 chatSession: {
                     ...llmState.state.chatSession,
-                    draftPrompt: {
-                        prompt: prompt,
-                        completion: chatSessionCompletionEngine.complete(prompt)?.trimStart() ?? ""
-                    }
+                    chatHistory: [],
+                    draftPrompt: ""
+                }
+            };
+        },
+        setDraftPrompt(prompt: string) {
+            llmState.state = {
+                ...llmState.state,
+                chatSession: {
+                    ...llmState.state.chatSession,
+                    draftPrompt: prompt
                 }
             };
         }
     }
 } as const;
-
-function getSimplifiedChatHistory(generatingResult: boolean, currentPrompt?: string) {
-    if (chatSession == null)
-        return [];
-
-    const chatHistory: SimplifiedChatItem[] = chatSession.getChatHistory()
-        .flatMap((item): SimplifiedChatItem[] => {
-            if (item.type === "system")
-                return [];
-            else if (item.type === "user")
-                return [{type: "user", message: item.text}];
-            else if (item.type === "model")
-                return [{
-                    type: "model",
-                    message: item.response
-                        .filter((item) => (typeof item === "string" || isChatModelResponseSegment(item)))
-                        .map((item): SimplifiedModelChatItem["message"][number] | null => {
-                            if (typeof item === "string")
-                                return {
-                                    type: "text",
-                                    text: item
-                                };
-                            else if (isChatModelResponseSegment(item))
-                                return {
-                                    type: "segment",
-                                    segmentType: item.segmentType,
-                                    text: item.text,
-                                    startTime: item.startTime,
-                                    endTime: item.endTime
-                                };
-
-                            void (item satisfies never); // ensure all item types are handled
-                            return null;
-                        })
-                        .filter((item) => item != null)
-
-                        // squash adjacent response items of the same type
-                        .reduce((res, item) => {
-                            return squashMessageIntoModelChatMessages(res, item);
-                        }, [] as SimplifiedModelChatItem["message"])
-                }];
-
-            void (item satisfies never); // ensure all item types are handled
-            return [];
-        });
-
-    if (generatingResult && currentPrompt != null) {
-        chatHistory.push({
-            type: "user",
-            message: currentPrompt
-        });
-
-        if (inProgressResponse.length > 0)
-            chatHistory.push({
-                type: "model",
-                message: inProgressResponse
-            });
-    }
-
-    return chatHistory;
-}
-
-/** Squash a new model response message into the existing model response messages array */
-function squashMessageIntoModelChatMessages(
-    modelChatMessages: SimplifiedModelChatItem["message"],
-    message: SimplifiedModelChatItem["message"][number]
-): SimplifiedModelChatItem["message"] {
-    const newModelChatMessages = structuredClone(modelChatMessages);
-    const lastExistingModelMessage = newModelChatMessages.at(-1);
-
-    if (lastExistingModelMessage == null || lastExistingModelMessage.type !== message.type) {
-        // avoid pushing empty text messages
-        if (message.type !== "text" || message.text !== "")
-            newModelChatMessages.push(message);
-
-        return newModelChatMessages;
-    }
-
-    if (lastExistingModelMessage.type === "text" && message.type === "text") {
-        lastExistingModelMessage.text += message.text;
-        return newModelChatMessages;
-    } else if (
-        lastExistingModelMessage.type === "segment" && message.type === "segment" &&
-        lastExistingModelMessage.segmentType === message.segmentType &&
-        lastExistingModelMessage.endTime == null
-    ) {
-        lastExistingModelMessage.text += message.text;
-        lastExistingModelMessage.endTime = message.endTime;
-        return newModelChatMessages;
-    }
-
-    newModelChatMessages.push(message);
-    return newModelChatMessages;
-}

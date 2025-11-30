@@ -1,17 +1,15 @@
 {
-  "name": "node-llama-cpp-project",
+  "name": "llama-node-electron-project",
   "private": true,
   "version": "0.0.0",
   "main": "./dist-electron/index.js",
   "type": "module",
-  "homepage": "https://github.com/withcatai/node-llama-cpp",
+  "homepage": "https://github.com/isdk/llama-node",
   "author": {
     "name": "Author name",
     "email": "email@example.com"
   },
   "scripts": {
-    "_postinstall": "npm run models:pull",
-    "models:pull": "node-llama-cpp pull --dir ./models \"{{modelUriOrUrl|escape|escape}}\"",
     "start": "vite dev",
     "start:inspect": "cross-env ENABLE_INSPECT=true vite dev",
     "start:build": "electron ./dist-electron",
@@ -29,7 +27,7 @@
     "highlight.js": "^11.11.1",
     "lifecycle-utils": "^3.0.1",
     "markdown-it": "^14.1.0",
-    "node-llama-cpp": "file:../..",
+    "@isdk/llama-node": "file:../..",
     "pretty-ms": "^9.2.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",

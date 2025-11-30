@@ -1,7 +1,11 @@
-import {defineConfig} from "vitest/config";
+import { defineConfig } from "vitest/config";
 
 export default defineConfig({
     test: {
+        exclude: [
+            "**/node_modules/**",
+            "llama/**",
+        ],
         pool: "forks",
         maxWorkers: 1,
         minWorkers: 1,

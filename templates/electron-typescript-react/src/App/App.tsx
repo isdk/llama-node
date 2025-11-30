@@ -1,20 +1,20 @@
-import {useCallback, useLayoutEffect, useRef} from "react";
-import {llmState} from "../state/llmState.ts";
-import {electronLlmRpc} from "../rpc/llmRpc.ts";
-import {useExternalState} from "../hooks/useExternalState.ts";
-import {SearchIconSVG} from "../icons/SearchIconSVG.tsx";
-import {StarIconSVG} from "../icons/StarIconSVG.tsx";
-import {DownloadIconSVG} from "../icons/DownloadIconSVG.tsx";
-import {Header} from "./components/Header/Header.tsx";
-import {ChatHistory} from "./components/ChatHistory/ChatHistory.tsx";
-import {InputRow} from "./components/InputRow/InputRow.tsx";
+import { useCallback, useLayoutEffect, useRef } from "react";
+import { llmState } from "../state/llmState.ts";
+import { electronLlmRpc } from "../rpc/llmRpc.ts";
+import { useExternalState } from "../hooks/useExternalState.ts";
+import { SearchIconSVG } from "../icons/SearchIconSVG.tsx";
+import { StarIconSVG } from "../icons/StarIconSVG.tsx";
+import { DownloadIconSVG } from "../icons/DownloadIconSVG.tsx";
+import { Header } from "./components/Header/Header.tsx";
+import { ChatHistory } from "./components/ChatHistory/ChatHistory.tsx";
+import { InputRow } from "./components/InputRow/InputRow.tsx";
 
 import "./App.css";
 
 
 export function App() {
     const state = useExternalState(llmState);
-    const {generatingResult} = state.chatSession;
+    const { generatingResult } = state.chatSession;
     const isScrollAnchoredRef = useRef(false);
     const lastAnchorScrollTopRef = useRef<number>(0);
 
@@ -57,7 +57,7 @@ export function App() {
                 scrollToBottom();
         });
 
-        window.addEventListener("scroll", onScroll, {passive: false});
+        window.addEventListener("scroll", onScroll, { passive: false });
         observer.observe(document.body, {
             box: "border-box"
         });
@@ -98,7 +98,7 @@ export function App() {
     const loading = state.selectedModelFilePath != null && error == null && (
         !state.model.loaded || !state.llama.loaded || !state.context.loaded || !state.contextSequence.loaded || !state.chatSession.loaded
     );
-    const showMessage = state.selectedModelFilePath == null || error != null || state.chatSession.simplifiedChat.length === 0;
+    const showMessage = state.selectedModelFilePath == null || error != null || state.chatSession.chatHistory.length === 0;
 
     return <div className="app">
         <Header
@@ -133,10 +133,10 @@ export function App() {
                     <div className="loadModel">
                         <div className="hint">Click the button above to load a model</div>
                         <div className="actions">
-                            <a className="starLink" target="_blank" href="https://github.com/withcatai/node-llama-cpp">
+                            <a className="starLink" href="https://github.com/isdk/llama-node">
                                 <StarIconSVG className="starIcon" />
                                 <div className="text">
-                                    Star <code>node-llama-cpp</code> on GitHub
+                                    Star <code>@isdk/llama-node</code> on GitHub
                                 </div>
                             </a>
 
@@ -201,7 +201,7 @@ export function App() {
                         !loading &&
                         state.selectedModelFilePath != null &&
                         error == null &&
-                        state.chatSession.simplifiedChat.length === 0
+                        state.chatSession.chatHistory.length === 0
                     ) &&
                     <div className="typeMessage">
                         Type a message to start the conversation
@@ -213,7 +213,7 @@ export function App() {
             !showMessage &&
             <ChatHistory
                 className="chatHistory"
-                simplifiedChat={state.chatSession.simplifiedChat}
+                chatHistory={state.chatSession.chatHistory}
                 generatingResult={generatingResult}
             />
         }
@@ -227,8 +227,8 @@ export function App() {
             onPromptInput={onPromptInput}
             sendPrompt={sendPrompt}
             generatingResult={generatingResult}
-            autocompleteInputDraft={state.chatSession.draftPrompt.prompt}
-            autocompleteCompletion={state.chatSession.draftPrompt.completion}
+            autocompleteInputDraft={state.chatSession.draftPrompt}
+            autocompleteCompletion=""
         />
     </div>;
 }

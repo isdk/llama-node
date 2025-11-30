@@ -1,24 +1,17 @@
 import classNames from "classnames";
-import {useCallback, useState} from "react";
-import {CopyIconSVG} from "../../../../../../../icons/CopyIconSVG.js";
-import {CheckIconSVG} from "../../../../../../../icons/CheckIconSVG.js";
-import {SimplifiedModelChatItem} from "../../../../../../../../electron/state/llmState.js";
+import { useCallback, useState } from "react";
+import { CopyIconSVG } from "../../../../../../../icons/CopyIconSVG.js";
+import { CheckIconSVG } from "../../../../../../../icons/CheckIconSVG.js";
 
 import "./ModelMessageCopyButton.css";
 
 const showCopiedTime = 1000 * 2;
 
-export function ModelMessageCopyButton({modelMessage}: ModelMessageCopyButtonProps) {
+export function ModelMessageCopyButton({ content }: ModelMessageCopyButtonProps) {
     const [copies, setCopies] = useState(0);
 
     const onClick = useCallback(() => {
-        const text = modelMessage
-            .filter((item) => item.type === "text")
-            .map((item) => item.text)
-            .join("\n")
-            .trim();
-
-        navigator.clipboard.writeText(text)
+        navigator.clipboard.writeText(content.trim())
             .then(() => {
                 setCopies(copies + 1);
 
@@ -29,7 +22,7 @@ export function ModelMessageCopyButton({modelMessage}: ModelMessageCopyButtonPro
             .catch((error) => {
                 console.error("Failed to copy text to clipboard", error);
             });
-    }, [modelMessage]);
+    }, [content]);
 
     return <button
         onClick={onClick}
@@ -41,5 +34,5 @@ export function ModelMessageCopyButton({modelMessage}: ModelMessageCopyButtonPro
 }
 
 type ModelMessageCopyButtonProps = {
-    modelMessage: SimplifiedModelChatItem["message"]
+    content: string
 };

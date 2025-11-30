@@ -14,13 +14,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: "pnpm"
       - name: Install modules
-        run: npm ci
+        run: pnpm install --frozen-lockfile
       - name: Build
-        run: npm run build
+        run: pnpm run build
       - name: Download latest llama.cpp release
         env:
           CI: true
@@ -76,240 +80,242 @@ jobs:
             os: macos-14
             artifact: "mac-arm64"
 
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Download build artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: build
-          path: dist
-
-      - name: Download llama.cpp artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: llama.cpp
-          path: llama
-
-      - name: Install dependencies on Windows
-        if: startsWith(matrix.config.os, 'windows')
-        run: |
-          choco install cmake.install --version=3.31.1
-          choco install cmake --version=3.31.1
-          choco install ninja
-
-      - name: Install dependencies on Ubuntu (1)
-        if: matrix.config.name == 'Ubuntu (1)'
-        run: |
-          sudo apt-get update
-          sudo apt-get install ninja-build libtbb-dev g++-aarch64-linux-gnu gcc-aarch64-linux-gnu g++-arm-linux-gnueabihf gcc-arm-linux-gnueabihf
-          
-          wget -c https://github.com/Kitware/CMake/releases/download/v3.31.7/cmake-3.31.7-linux-x86_64.tar.gz
-          sudo tar --strip-components=1 -C /usr/local -xzf cmake-3.31.7-linux-x86_64.tar.gz
-          rm -f ./cmake-3.31.7-linux-x86_64.tar.gz
-          
-          which aarch64-linux-gnu-gcc
-          which aarch64-linux-gnu-g++
-          
-          which arm-linux-gnueabihf-gcc
-          which arm-linux-gnueabihf-g++
-          
-          cmake --version
-
-      - name: Install dependencies on Ubuntu (2)
-        if: matrix.config.name == 'Ubuntu (2)'
-        run: |
-          sudo apt-get update
-          sudo apt-get install ninja-build libtbb-dev
-          
-          wget -c https://github.com/Kitware/CMake/releases/download/v3.31.7/cmake-3.31.7-linux-x86_64.tar.gz
-          sudo tar --strip-components=1 -C /usr/local -xzf cmake-3.31.7-linux-x86_64.tar.gz
-          rm -f ./cmake-3.31.7-linux-x86_64.tar.gz
-          
-          cmake --version
-
-      - name: Install Cuda 13.0 on Windows (1)
-        if: matrix.config.name == 'Windows (1)'
-        shell: bash
-        timeout-minutes: 60
-        run: |
-          curl -Lo cuda_13.0.0_windows_network.exe https://developer.download.nvidia.com/compute/cuda/13.0.0/network_installers/cuda_13.0.0_windows_network.exe
-          
-          echo "Installing Cuda 13.0.0"
-          powershell -Command "Start-Process -FilePath cuda_13.0.0_windows_network.exe -ArgumentList '-s','-n' -Wait"
-          echo "Cuda installation finished"
-          
-          rm -f ./cuda_13.0.0_windows_network.exe
-          
-          echo "where cudart64_13.dll: $(where cudart64_13.dll)"
-          
-          echo "CUDA_PATH=C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v13.0" >> $GITHUB_ENV
-          echo "CUDA_PATH_V13_0=C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v13.0" >> $GITHUB_ENV
-          echo "CUDA_PATH_VX_Y=CUDA_PATH_V13_0" >> $GITHUB_ENV
-          echo "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v13.0\\bin" >> $GITHUB_PATH
-
-      - name: Install Cuda 12.4 on Windows (2)
-        if: matrix.config.name == 'Windows (2)'
-        uses: Jimver/cuda-toolkit@v0.2.15
-        with:
-          cuda: '12.4.0'
-          method: 'network'
-          sub-packages: '["nvcc", "cudart", "cublas", "cublas_dev", "thrust", "visual_studio_integration"]'
-          use-local-cache: false
-
-      - name: Install Cuda 13.0 on Ubuntu (1)
-        if: matrix.config.name == 'Ubuntu (1)'
-        uses: Jimver/cuda-toolkit@v0.2.27
-        with:
-          cuda: '13.0.0'
-          method: 'network'
-
-      - name: Install Cuda 12.4 on Ubuntu (2)
-        if: matrix.config.name == 'Ubuntu (2)'
-        uses: Jimver/cuda-toolkit@v0.2.15
-        with:
-          cuda: '12.4.0'
-          method: 'network'
-
-      - name: Install Vulkan SDK on Windows (1)
-        if: matrix.config.name == 'Windows (1)'
-        shell: powershell
-        env:
-          VULKAN_VERSION: 1.4.313.2
-        run: |
-          curl.exe -o $env:RUNNER_TEMP/VulkanSDK-Installer.exe -L "https://sdk.lunarg.com/sdk/download/${env:VULKAN_VERSION}/windows/vulkansdk-windows-X64-${env:VULKAN_VERSION}.exe"
-          & "$env:RUNNER_TEMP\VulkanSDK-Installer.exe" --accept-licenses --default-answer --confirm-command install
-          Add-Content $env:GITHUB_ENV "VULKAN_SDK=C:\VulkanSDK\${env:VULKAN_VERSION}"
-          Add-Content $env:GITHUB_PATH "C:\VulkanSDK\${env:VULKAN_VERSION}\bin"
-
-      - name: Install Vulkan SDK on Ubuntu
-        if: matrix.config.name == 'Ubuntu (1)'
-        run: |
-          wget -qO- https://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo tee /etc/apt/trusted.gpg.d/lunarg.asc
-          sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-jammy.list https://packages.lunarg.com/vulkan/lunarg-vulkan-jammy.list
-          sudo apt update
-          sudo apt install vulkan-sdk
-
-      - name: Install dependencies on macOS
-        if: matrix.config.name == 'macOS'
-        run: |
-          brew install cmake ninja
-          alias make=cmake
-
-      - name: Setup & Build
-        id: build
-        shell: bash
-        timeout-minutes: 300
-        env:
-          ARTIFACT_NAME: ${{ matrix.config.artifact }}
-        run: |
-          npm ci
-          
-          npx zx -y <<'EOF'
-          
-          async function getLatestNodeVersions(maxDate) {
-            const res = await fetch("https://nodejs.org/dist/index.json");
-            const data = await res.json();
-            const versions = new Map();
-            let latestVersion = null;
-            
-            for (const version of data) {
-              const majorVersion = Number(version.version.split(".")[0].slice("v".length));
-              const versionDate = new Date(version.date);
+        steps:
+          - uses: actions/checkout@v4
+          - uses: pnpm/action-setup@v4
+            with:
+              version: 9
+          - uses: actions/setup-node@v4
+            with:
+              node-version: "20"
+              cache: "pnpm"
+    
+          - name: Download build artifact
+            uses: actions/download-artifact@v4
+            with:
+              name: build
+              path: dist
+          - name: Download llama.cpp artifact
+            uses: actions/download-artifact@v4
+            with:
+              name: llama.cpp
+              path: llama
+    
+          - name: Install dependencies on Windows
+            if: startsWith(matrix.config.os, 'windows')
+            run: |
+              choco install cmake.install --version=3.31.1
+              choco install cmake --version=3.31.1
+              choco install ninja
+    
+          - name: Install dependencies on Ubuntu (1)
+            if: matrix.config.name == 'Ubuntu (1)'
+            run: |
+              sudo apt-get update
+              sudo apt-get install ninja-build libtbb-dev g++-aarch64-linux-gnu gcc-aarch64-linux-gnu g++-arm-linux-gnueabihf gcc-arm-linux-gnueabihf
               
-              if (maxDate != null && versionDate.getTime() > maxDate)
-                continue;
+              wget -c https://github.com/Kitware/CMake/releases/download/v3.31.7/cmake-3.31.7-linux-x86_64.tar.gz
+              sudo tar --strip-components=1 -C /usr/local -xzf cmake-3.31.7-linux-x86_64.tar.gz
+              rm -f ./cmake-3.31.7-linux-x86_64.tar.gz
               
-              if (!versions.has(majorVersion)) {
-                versions.set(majorVersion, version.version);
+              which aarch64-linux-gnu-gcc
+              which aarch64-linux-gnu-g++
+              
+              which arm-linux-gnueabihf-gcc
+              which arm-linux-gnueabihf-g++
+              
+              cmake --version
+    
+          - name: Install dependencies on Ubuntu (2)
+            if: matrix.config.name == 'Ubuntu (2)'
+            run: |
+              sudo apt-get update
+              sudo apt-get install ninja-build libtbb-dev
+              
+              wget -c https://github.com/Kitware/CMake/releases/download/v3.31.7/cmake-3.31.7-linux-x86_64.tar.gz
+              sudo tar --strip-components=1 -C /usr/local -xzf cmake-3.31.7-linux-x86_64.tar.gz
+              rm -f ./cmake-3.31.7-linux-x86_64.tar.gz
+              
+              cmake --version
+    
+          - name: Install Cuda 13.0 on Windows (1)
+            if: matrix.config.name == 'Windows (1)'
+            shell: bash
+            timeout-minutes: 60
+            run: |
+              curl -Lo cuda_13.0.0_windows_network.exe https://developer.download.nvidia.com/compute/cuda/13.0.0/network_installers/cuda_13.0.0_windows_network.exe
+              
+              echo "Installing Cuda 13.0.0"
+              powershell -Command "Start-Process -FilePath cuda_13.0.0_windows_network.exe -ArgumentList '-s','-n' -Wait"
+              echo "Cuda installation finished"
+              
+              rm -f ./cuda_13.0.0_windows_network.exe
+              
+              echo "where cudart64_13.dll: $(where cudart64_13.dll)"
+              
+              echo "CUDA_PATH=C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v13.0" >> $GITHUB_ENV
+              echo "CUDA_PATH_V13_0=C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v13.0" >> $GITHUB_ENV
+              echo "CUDA_PATH_VX_Y=CUDA_PATH_V13_0" >> $GITHUB_ENV
+              echo "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v13.0\\bin" >> $GITHUB_PATH
+    
+          - name: Install Cuda 12.4 on Windows (2)
+            if: matrix.config.name == 'Windows (2)'
+            uses: Jimver/cuda-toolkit@v0.2.15
+            with:
+              cuda: '12.4.0'
+              method: 'network'
+              sub-packages: '["nvcc", "cudart", "cublas", "cublas_dev", "thrust", "visual_studio_integration"]'
+              use-local-cache: false
+    
+          - name: Install Cuda 13.0 on Ubuntu (1)
+            if: matrix.config.name == 'Ubuntu (1)'
+            uses: Jimver/cuda-toolkit@v0.2.27
+            with:
+              cuda: '13.0.0'
+              method: 'network'
+    
+          - name: Install Cuda 12.4 on Ubuntu (2)
+            if: matrix.config.name == 'Ubuntu (2)'
+            uses: Jimver/cuda-toolkit@v0.2.15
+            with:
+              cuda: '12.4.0'
+              method: 'network'
+    
+          - name: Install Vulkan SDK on Windows (1)
+            if: matrix.config.name == 'Windows (1)'
+            shell: powershell
+            env:
+              VULKAN_VERSION: 1.4.313.2
+            run: |
+              curl.exe -o $env:RUNNER_TEMP/VulkanSDK-Installer.exe -L "https://sdk.lunarg.com/sdk/download/${env:VULKAN_VERSION}/windows/vulkansdk-windows-X64-${env:VULKAN_VERSION}.exe"
+              & "$env:RUNNER_TEMP\VulkanSDK-Installer.exe" --accept-licenses --default-answer --confirm-command install
+              Add-Content $env:GITHUB_ENV "VULKAN_SDK=C:\VulkanSDK\${env:VULKAN_VERSION}"
+              Add-Content $env:GITHUB_PATH "C:\VulkanSDK\${env:VULKAN_VERSION}\bin"
+    
+          - name: Install Vulkan SDK on Ubuntu
+            if: matrix.config.name == 'Ubuntu (1)'
+            run: |
+              wget -qO- https://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo tee /etc/apt/trusted.gpg.d/lunarg.asc
+              sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-jammy.list https://packages.lunarg.com/vulkan/lunarg-vulkan-jammy.list
+              sudo apt update
+              sudo apt install vulkan-sdk
+    
+          - name: Install dependencies on macOS
+            if: matrix.config.name == 'macOS'
+            run: |
+              brew install cmake ninja
+              alias make=cmake
+    
+          - name: Setup & Build
+            id: build
+            shell: bash
+            timeout-minutes: 300
+            env:
+              ARTIFACT_NAME: ${{ matrix.config.artifact }}
+            run: |
+              pnpm install --frozen-lockfile
+              
+              pnpm zx -y <<'EOF'
+              
+              async function getLatestNodeVersions(maxDate) {
+                const res = await fetch("https://nodejs.org/dist/index.json");
+                const data = await res.json();
+                const versions = new Map();
+                let latestVersion = null;
+                
+                for (const version of data) {
+                  const majorVersion = Number(version.version.split(".")[0].slice("v".length));
+                  const versionDate = new Date(version.date);
+                  
+                  if (maxDate != null && versionDate.getTime() > maxDate)
+                    continue;
+                  
+                  if (!versions.has(majorVersion)) {
+                    versions.set(majorVersion, version.version);
+                  }
+                  
+                  if (latestVersion === null || majorVersion > latestVersion) {
+                    latestVersion = majorVersion;
+                  }
+                }
+                
+                return {versions, latestVersion};
               }
               
-              if (latestVersion === null || majorVersion > latestVersion) {
-                latestVersion = majorVersion;
+              const {versions: latestNodeVersions} = await getLatestNodeVersions(Date.now() - 1000 * 60 * 60 * 24 * 14);
+              
+              const nodeVersion = latestNodeVersions.get(20);
+              const windowsOnArmNodeVersion = latestNodeVersions.get(20);
+              
+              if (nodeVersion == null || windowsOnArmNodeVersion == null) {
+                throw new Error("Could not find node versions");
               }
-            }
-            
-            return {versions, latestVersion};
-          }
-          
-          const {versions: latestNodeVersions} = await getLatestNodeVersions(Date.now() - 1000 * 60 * 60 * 24 * 14);
-          
-          const nodeVersion = latestNodeVersions.get(20);
-          const windowsOnArmNodeVersion = latestNodeVersions.get(20);
-          
-          if (nodeVersion == null || windowsOnArmNodeVersion == null) {
-            throw new Error("Could not find node versions");
-          }
-          
-          $.verbose = true;
-          await $`mkdir -p bins`;
-          
-          async function buildBinary(arch, flags = [], nodeTarget = nodeVersion) {
-            console.log(`Building ${arch} for node ${nodeTarget} with flags`, flags);
-            
-            await $`node ./dist/cli/cli.js source build --ciMode --noUsageExample --arch ${arch} --nodeTarget ${nodeVersion} ${flags}`;
-          }
-          
-          // build binaries
-          if (process.env.ARTIFACT_NAME === "win-1") {
-            await buildBinary("x64", ["--gpu", "false"]);
-            await buildBinary("x64", ["--gpu", "cuda"]);
-            await buildBinary("x64", ["--gpu", "vulkan"]);
-          } else if (process.env.ARTIFACT_NAME === "win-2") {
-            await buildBinary("arm64", ["--gpu", "false"], windowsOnArmNodeVersion);
-            await buildBinary("x64", ["--gpu", "cuda"]);
-          } else if (process.env.ARTIFACT_NAME === "linux-1") {
-            await buildBinary("x64", ["--gpu", "false"]);
-            await buildBinary("x64", ["--gpu", "cuda"]);
-            await buildBinary("x64", ["--gpu", "vulkan"]);
-            await buildBinary("arm64", ["--gpu", "false"]);
-            await buildBinary("armv7l", ["--gpu", "false"]);
-          } else if (process.env.ARTIFACT_NAME === "linux-2") {
-            await buildBinary("x64", ["--gpu", "cuda"]);
-          } else if (process.env.ARTIFACT_NAME === "mac-x64") {
-            await buildBinary("x64", ["--gpu", "false"]);
-          } else if (process.env.ARTIFACT_NAME === "mac-arm64") {
-            await buildBinary("arm64", ["--gpu", "metal"]);
-          }
-          
-          // move binaries to bins
-          const localBuildsDirectoryPath = path.join(process.cwd(), "llama", "localBuilds");
-          const llamaBinsDirectoryPath = path.join(process.cwd(), "bins");
-          for (const folderName of await fs.readdir(localBuildsDirectoryPath)) {
-            await fs.move(
-              path.join(localBuildsDirectoryPath, folderName, "Release"),
-              path.join(llamaBinsDirectoryPath, folderName)
-            );
-          }
-          
-          if (process.env.ARTIFACT_NAME === "win-2") {
-            await fs.move(
-              path.join(llamaBinsDirectoryPath, "win-x64-cuda"),
-              path.join(llamaBinsDirectoryPath, "win-x64-cuda-2")
-            );
-            
-            if (!(await fs.pathExists(path.join(llamaBinsDirectoryPath, "win-x64-cuda-2", "ggml-cuda.dll")))) {
-              throw new Error("ggml-cuda.dll not found in win-x64-cuda-2");
-            }
-          } else if (process.env.ARTIFACT_NAME === "linux-2") {
-            await fs.move(
-              path.join(llamaBinsDirectoryPath, "linux-x64-cuda"),
-              path.join(llamaBinsDirectoryPath, "linux-x64-cuda-2")
-            );
-            
-            if (!(await fs.pathExists(path.join(llamaBinsDirectoryPath, "linux-x64-cuda-2", "libggml-cuda.so")))) {
-              throw new Error("libggml-cuda.so not found in linux-x64-cuda-2");
-            }
-          }
-          
-          await $`echo "Built binaries:"`;
-          await $`ls bins`;
-          
-          EOF
-
+              
+              $.verbose = true;
+              await $`mkdir -p bins`;
+              
+              async function buildBinary(arch, flags = [], nodeTarget = nodeVersion) {
+                console.log(`Building ${arch} for node ${nodeTarget} with flags`, flags);
+                
+                await $`node ./dist/cli/cli.js source build --ciMode --noUsageExample --arch ${arch} --nodeTarget ${nodeVersion} ${flags}`;
+              }
+              
+              // build binaries
+              if (process.env.ARTIFACT_NAME === "win-1") {
+                await buildBinary("x64", ["--gpu", "false"]);
+                await buildBinary("x64", ["--gpu", "cuda"]);
+                await buildBinary("x64", ["--gpu", "vulkan"]);
+              } else if (process.env.ARTIFACT_NAME === "win-2") {
+                await buildBinary("arm64", ["--gpu", "false"], windowsOnArmNodeVersion);
+                await buildBinary("x64", ["--gpu", "cuda"]);
+              } else if (process.env.ARTIFACT_NAME === "linux-1") {
+                await buildBinary("x64", ["--gpu", "false"]);
+                await buildBinary("x64", ["--gpu", "cuda"]);
+                await buildBinary("x64", ["--gpu", "vulkan"]);
+                await buildBinary("arm64", ["--gpu", "false"]);
+                await buildBinary("armv7l", ["--gpu", "false"]);
+              } else if (process.env.ARTIFACT_NAME === "linux-2") {
+                await buildBinary("x64", ["--gpu", "cuda"]);
+              } else if (process.env.ARTIFACT_NAME === "mac-x64") {
+                await buildBinary("x64", ["--gpu", "false"]);
+              } else if (process.env.ARTIFACT_NAME === "mac-arm64") {
+                await buildBinary("arm64", ["--gpu", "metal"]);
+              }
+              
+              // move binaries to bins
+              const localBuildsDirectoryPath = path.join(process.cwd(), "llama", "localBuilds");
+              const llamaBinsDirectoryPath = path.join(process.cwd(), "bins");
+              for (const folderName of await fs.readdir(localBuildsDirectoryPath)) {
+                await fs.move(
+                  path.join(localBuildsDirectoryPath, folderName, "Release"),
+                  path.join(llamaBinsDirectoryPath, folderName)
+                );
+              }
+              
+              if (process.env.ARTIFACT_NAME === "win-2") {
+                await fs.move(
+                  path.join(llamaBinsDirectoryPath, "win-x64-cuda"),
+                  path.join(llamaBinsDirectoryPath, "win-x64-cuda-2")
+                );
+                
+                if (!(await fs.pathExists(path.join(llamaBinsDirectoryPath, "win-x64-cuda-2", "ggml-cuda.dll")))) {
+                  throw new Error("ggml-cuda.dll not found in win-x64-cuda-2");
+                }
+              } else if (process.env.ARTIFACT_NAME === "linux-2") {
+                await fs.move(
+                  path.join(llamaBinsDirectoryPath, "linux-x64-cuda"),
+                  path.join(llamaBinsDirectoryPath, "linux-x64-cuda-2")
+                );
+                
+                if (!(await fs.pathExists(path.join(llamaBinsDirectoryPath, "linux-x64-cuda-2", "libggml-cuda.so")))) {
+                  throw new Error("libggml-cuda.so not found in linux-x64-cuda-2");
+                }
+              }
+              
+              await $`echo "Built binaries:"`;
+              await $`ls bins`;
+              
+              EOF
 #      - name: Cache UPX
 #        id: cache-upx
 #        uses: actions/cache@v4
@@ -382,11 +388,15 @@ jobs:
       next-version: ${{ steps.save-next-version.outputs.next-version }}
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: "pnpm"
       - name: Install modules
-        run: npm ci
+        run: pnpm install --frozen-lockfile
       - name: Download build artifact
         uses: actions/download-artifact@v4
         with:
@@ -404,7 +414,7 @@ jobs:
       - name: Resolve next release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx --no vite-node ./scripts/resolveNextReleaseVersion.ts --saveReleaseToFile ./semanticReleaseDryRunReleaseResult.json --saveVersionToFile ./resolvedNextVersion.txt
+        run: pnpm vite-node ./scripts/resolveNextReleaseVersion.ts --saveReleaseToFile ./semanticReleaseDryRunReleaseResult.json --saveVersionToFile ./resolvedNextVersion.txt
       - name: Save next version output
         id: save-next-version
         run: echo "next-version=$(cat ./resolvedNextVersion.txt)" >> $GITHUB_OUTPUT
@@ -422,43 +432,46 @@ jobs:
           name: "resolved-next-release"
           path: "./semanticReleaseDryRunReleaseResult.json"
 
-  standalone-tests:
-    name: Standalone tests
-    runs-on: ubuntu-22.04
-    needs:
-      - build
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Download build artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: build
-          path: dist
-
-      - name: Download llama.cpp artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: llama.cpp
-          path: llama
-
-      - name: Install dependencies on ubuntu
-        run: |
-          sudo apt-get update
-          sudo apt-get install ninja-build cmake 
-
-      - name: Install modules
-        run: npm ci
-
-      - name: Build binary
-        run: node ./dist/cli/cli.js source build --noUsageExample
-
-      - name: Run standalone tests
-        run: npm run test:standalone
-
+    standalone-tests:
+      name: Standalone tests
+      runs-on: ubuntu-22.04
+      needs:
+        - build
+      steps:
+        - uses: actions/checkout@v4
+        - uses: pnpm/action-setup@v4
+          with:
+            version: 9
+        - uses: actions/setup-node@v4
+          with:
+            node-version: "20"
+            cache: "pnpm"
+  
+        - name: Download build artifact
+          uses: actions/download-artifact@v4
+          with:
+            name: build
+            path: dist
+  
+        - name: Download llama.cpp artifact
+          uses: actions/download-artifact@v4
+          with:
+            name: llama.cpp
+            path: llama
+  
+        - name: Install dependencies on ubuntu
+          run: |
+            sudo apt-get update
+            sudo apt-get install ninja-build cmake 
+  
+        - name: Install modules
+          run: pnpm install --frozen-lockfile
+  
+        - name: Build binary
+          run: node ./dist/cli/cli.js source build --noUsageExample
+  
+        - name: Run standalone tests
+          run: pnpm run test:standalone
   model-dependent-tests:
     name: Model dependent tests
     runs-on: macos-13
@@ -468,9 +481,13 @@ jobs:
       - build
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: "pnpm"
 
       - name: Download build artifact
         uses: actions/download-artifact@v4
@@ -496,7 +513,7 @@ jobs:
           alias make=cmake
 
       - name: Install modules
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Build binary
         run: node ./dist/cli/cli.js source build --noUsageExample
@@ -513,12 +530,12 @@ jobs:
 
       - name: Download models or ensure all models are downloaded
         id: download-all-test-models
-        run: npm run dev:setup:downloadAllTestModels
+        run: pnpm run dev:setup:downloadAllTestModels
 
       - name: Run model dependent tests
         env:
           NODE_OPTIONS: "--max-old-space-size=4096"
-        run: npm run test:modelDependent
+        run: pnpm run test:modelDependent
 
       - name: Save cached models
         id: cache-save-test-models
@@ -552,11 +569,15 @@ jobs:
       - uses: actions/checkout@v4
         with:
           lfs: true
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: "pnpm"
       - name: Install modules
-        run: npm ci
+        run: pnpm install --frozen-lockfile
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
@@ -565,92 +586,91 @@ jobs:
           mkdir -p bins
           mv artifacts/bins-*/* bins/
           mv artifacts/build dist/
-          
+
           mkdir -p ./bins/win-x64-cuda/fallback
           mv ./bins/win-x64-cuda-2/ggml-cuda.dll ./bins/win-x64-cuda/fallback/ggml-cuda.dll
           rm -rf ./bins/win-x64-cuda-2
-          
+
           mkdir -p ./bins/linux-x64-cuda/fallback
           mv ./bins/linux-x64-cuda-2/libggml-cuda.so ./bins/linux-x64-cuda/fallback/libggml-cuda.so
           rm -rf ./bins/linux-x64-cuda-2
-          
+
           cp -r artifacts/llama.cpp/llama.cpp/grammars llama/grammars
-          
+
           rm -f ./llama/binariesGithubRelease.json
           mv artifacts/llama.cpp/binariesGithubRelease.json ./llama/binariesGithubRelease.json
-          
+
           rm -f ./llama/llama.cpp.info.json
           mv artifacts/llama.cpp/llama.cpp.info.json ./llama/llama.cpp.info.json
-          
+
           rm -f ./llama/gitRelease.bundle
           mv artifacts/llama.cpp/gitRelease.bundle ./llama/gitRelease.bundle
-          
+
           mv artifacts/build-templates templates/packed/
           rm -f ./templates/package.json
           rm -f ./templates/package-lock.json
-          
+
           echo "Built binaries:"
           ls bins
-      - name: Move binaries to standalone prebuilt binary modules
-        run: npx --no vite-node ./scripts/movePrebuiltBinariesToStandaloneModules.ts
-      - name: Prepare standalone prebuilt binary modules
-        run: npx --no vite-node ./scripts/prepareStandalonePrebuiltBinaryModules.ts
-      - name: Add "postinstall" script to package.json
-        run: npm run addPostinstallScript
-      - name: Move semanticReleaseDryRunReleaseResult.json artifact
-        run: mv artifacts/resolved-next-release/semanticReleaseDryRunReleaseResult.json ./semanticReleaseDryRunReleaseResult.json
-      - name: Release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-          GH_RELEASE_REF: ${{ github.ref }}
-        run: |
-          echo "//registry.npmjs.org/:_authToken=\${NPM_TOKEN}" > ~/.npmrc
-          export DRY_RUN_RESULT_FILE_PATH="$(pwd)/semanticReleaseDryRunReleaseResult.json"
-          
-          git apply --ignore-whitespace ./scripts/patches/@semantic-release+github+11.0.0.patch
-          npx semantic-release
-      - name: Set npm package url to GITHUB_OUTPUT
-        id: set-npm-url
-        run: |
-          if [ -f .semanticRelease.npmPackage.deployedVersion.txt ]; then
-            echo "npm-url=https://www.npmjs.com/package/node-llama-cpp/v/$(cat .semanticRelease.npmPackage.deployedVersion.txt)" >> $GITHUB_OUTPUT
-          fi
-      - name: Set package version to GITHUB_OUTPUT
-        id: set-package-version
-        run: |
-          if [ -f .semanticRelease.npmPackage.deployedVersion.txt ]; then
-            echo "package-version=$(cat .semanticRelease.npmPackage.deployedVersion.txt)" >> $GITHUB_OUTPUT
-          fi
-      - name: Prepare `create-node-llama-cpp` module
-        if: steps.set-npm-url.outputs.npm-url != ''
-        run: |
-          export DEPLOYED_PACKAGE_VERSION=$(cat .semanticRelease.npmPackage.deployedVersion.txt)
-          
-          pushd packages/create-node-llama-cpp
-          npm ci --ignore-scripts
-          popd
-          
-          npx --no vite-node ./scripts/prepareCreateNodeLlamaCppModuleForPublish.ts --packageVersion "$DEPLOYED_PACKAGE_VERSION"
-          
-          pushd packages/create-node-llama-cpp
-          npm run build
-      - name: Release `create-node-llama-cpp` module
-        if: steps.set-npm-url.outputs.npm-url != ''
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-          GH_RELEASE_REF: ${{ github.ref }}
-        run: |
-          cd packages/create-node-llama-cpp
-          
-          echo "//registry.npmjs.org/:_authToken=\${NPM_TOKEN}" > ~/.npmrc
-          
-          if [ "$GH_RELEASE_REF" == "refs/heads/beta" ]; then
-              npm publish --tag beta
-          else
-              npm publish
-          fi
-
+            - name: Move binaries to standalone prebuilt binary modules
+              run: pnpm vite-node ./scripts/movePrebuiltBinariesToStandaloneModules.ts
+            - name: Prepare standalone prebuilt binary modules
+              run: pnpm vite-node ./scripts/prepareStandalonePrebuiltBinaryModules.ts
+            - name: Add "postinstall" script to package.json
+              run: pnpm run addPostinstallScript
+            - name: Move semanticReleaseDryRunReleaseResult.json artifact
+              run: mv artifacts/resolved-next-release/semanticReleaseDryRunReleaseResult.json ./semanticReleaseDryRunReleaseResult.json
+            - name: Release
+              env:
+                GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+                GH_RELEASE_REF: ${{ github.ref }}
+              run: |
+                echo "//registry.npmjs.org/:_authToken=\${NPM_TOKEN}" > ~/.npmrc
+                export DRY_RUN_RESULT_FILE_PATH="$(pwd)/semanticReleaseDryRunReleaseResult.json"
+                
+                git apply --ignore-whitespace ./scripts/patches/@semantic-release+github+11.0.0.patch
+                pnpm semantic-release
+            - name: Set npm package url to GITHUB_OUTPUT
+              id: set-npm-url
+              run: |
+                if [ -f .semanticRelease.npmPackage.deployedVersion.txt ]; then
+                  echo "npm-url=https://www.npmjs.com/package/node-llama-cpp/v/$(cat .semanticRelease.npmPackage.deployedVersion.txt)" >> $GITHUB_OUTPUT
+                fi
+            - name: Set package version to GITHUB_OUTPUT
+              id: set-package-version
+              run: |
+                if [ -f .semanticRelease.npmPackage.deployedVersion.txt ]; then
+                  echo "package-version=$(cat .semanticRelease.npmPackage.deployedVersion.txt)" >> $GITHUB_OUTPUT
+                fi
+            - name: Prepare `create-node-llama-cpp` module
+              if: steps.set-npm-url.outputs.npm-url != ''
+              run: |
+                export DEPLOYED_PACKAGE_VERSION=$(cat .semanticRelease.npmPackage.deployedVersion.txt)
+                
+                pushd packages/create-node-llama-cpp
+                pnpm install --ignore-scripts --frozen-lockfile
+                popd
+                
+                pnpm vite-node ./scripts/prepareCreateNodeLlamaCppModuleForPublish.ts --packageVersion "$DEPLOYED_PACKAGE_VERSION"
+                
+                pushd packages/create-node-llama-cpp
+                pnpm run build
+            - name: Release `create-node-llama-cpp` module
+              if: steps.set-npm-url.outputs.npm-url != ''
+              env:
+                NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+                GH_RELEASE_REF: ${{ github.ref }}
+              run: |
+                cd packages/create-node-llama-cpp
+                
+                echo "//registry.npmjs.org/:_authToken=\${NPM_TOKEN}" > ~/.npmrc
+                
+                if [ "$GH_RELEASE_REF" == "refs/heads/beta" ]; then
+                    pnpm publish --tag beta
+                else
+                    pnpm publish
+                fi
   auto-approve-documentation-website-deployment:
     name: Auto-approve documentation website deployment
     runs-on: ubuntu-latest
@@ -688,9 +708,13 @@ jobs:
       - uses: actions/checkout@v4
         with:
           lfs: true
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: "pnpm"
 
       - name: Install dependencies on Ubuntu
         if: matrix.config.name == 'Ubuntu'
@@ -700,7 +724,7 @@ jobs:
           sudo snap install snapcraft --classic
 
       - name: Install modules
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Create Electron app project
         shell: bash
@@ -708,9 +732,9 @@ jobs:
           DEPLOYED_PACKAGE_VERSION: ${{ needs.release.outputs.package-version }}
           NODE_LLAMA_CPP_SKIP_DOWNLOAD: true
         run: |
-          npx --no vite-node ./scripts/scaffoldElectronExampleForCiBuild.ts --packageVersion "$DEPLOYED_PACKAGE_VERSION" --packageFolderPath ./electron-app-example
+          pnpm vite-node ./scripts/scaffoldElectronExampleForCiBuild.ts --packageVersion "$DEPLOYED_PACKAGE_VERSION" --packageFolderPath ./electron-app-example
           cd electron-app-example
-          npm install
+          pnpm install
 
       - name: Build electron app
         id: build
@@ -718,7 +742,7 @@ jobs:
         timeout-minutes: 480
         run: |
           cd electron-app-example
-          npm run build
+          pnpm run build
           ls ./release
 
       - name: Upload artifacts
@@ -735,89 +759,92 @@ jobs:
           RELEASE_TAG: ${{ needs.release.outputs.package-version }}
         run: |
           shopt -s nullglob
-          
+
           for file in ./electron-app-example/release/*.{dmg,zip,exe,appx,AppImage,snap,assert,deb,tar.gz}; do
             echo "Adding $file to release $RELEASE_TAG"
             gh release upload "v$RELEASE_TAG" "$file"
           done
-          
+
           shopt -u nullglob
 
-  update-documentation-website:
-    name: Update documentation website
-    if: |
-      always() &&
-      github.event_name == 'push' &&
-      github.ref == 'refs/heads/master' &&
-      needs.build.result == 'success' &&
-      needs.resolve-next-release.result == 'success' &&
-      needs.resolve-next-release.outputs.next-version != '' &&
-      needs.resolve-next-release.outputs.next-version != 'false' && (
-        needs.release.result == 'skipped' || (
-          needs.release.result == 'success' &&
-          needs.release.outputs.package-version != ''
+    update-documentation-website:
+      name: Update documentation website
+      if: |
+        always() &&
+        github.event_name == 'push' &&
+        github.ref == 'refs/heads/master' &&
+        needs.build.result == 'success' &&
+        needs.resolve-next-release.result == 'success' &&
+        needs.resolve-next-release.outputs.next-version != '' &&
+        needs.resolve-next-release.outputs.next-version != 'false' && (
+          needs.release.result == 'skipped' || (
+            needs.release.result == 'success' &&
+            needs.release.outputs.package-version != ''
+          )
         )
-      )
-    runs-on: ubuntu-latest
-    concurrency: update-documentation-website-${{ github.ref }}
-    environment:
-      name: Documentation website
-      url: "https://node-llama-cpp.withcat.ai"
-    permissions:
-      pages: write
-      id-token: write
-      contents: read
-    needs:
-      - build
-      - resolve-next-release
-      - release
-
-    # All steps are copied to `update-documentation-website-no-release` job
-    # Can be replaced with YAML anchors when this will be supported by GitHub Actions:
-    # https://github.com/actions/runner/issues/1182#issuecomment-2317953582
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          lfs: true
-          fetch-depth: 0
-          fetch-tags: true
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-      - name: Install modules
-        run: npm ci
-      - uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-      - name: Move artifacts
-        run: |
-          mv artifacts/build dist/
-          
-          cp -r artifacts/llama.cpp/llama.cpp llama/llama.cpp
-
-          rm -f ./llama/binariesGithubRelease.json
-          mv artifacts/llama.cpp/binariesGithubRelease.json ./llama/binariesGithubRelease.json
-
-          rm -f ./llama/llama.cpp.info.json
-          mv artifacts/llama.cpp/llama.cpp.info.json ./llama/llama.cpp.info.json
-      - name: Resolve docs version
-        env:
-          RELEASE_VERSION: ${{ needs.release.outputs.package-version || needs.resolve-next-release.outputs.next-version }}
-        run: |
-          if [ "$RELEASE_VERSION" == "false" ]; then
-            npx --no vite-node ./scripts/resolveLatestReleaseVersion.ts --saveVersionToFile ./docsVersion.txt
-          else
-            echo "$RELEASE_VERSION" > ./docsVersion.txt
-          fi
-      - name: Generate docs with updated version
-        env:
-          DOCS_URL_BASE: "/"
-        run: |
-          export DOCS_PACKAGE_VERSION="$(cat ./docsVersion.txt)"
-          echo "Package version: $DOCS_PACKAGE_VERSION"
-          
-          npm run docs:build
-      - name: Upload docs to GitHub Pages
+      runs-on: ubuntu-latest
+      concurrency: update-documentation-website-${{ github.ref }}
+      environment:
+        name: Documentation website
+        url: "https://node-llama-cpp.withcat.ai"
+      permissions:
+        pages: write
+        id-token: write
+        contents: read
+      needs:
+        - build
+        - resolve-next-release
+        - release
+  
+      # All steps are copied to `update-documentation-website-no-release` job
+      # Can be replaced with YAML anchors when this will be supported by GitHub Actions:
+      # https://github.com/actions/runner/issues/1182#issuecomment-2317953582
+      steps:
+        - uses: actions/checkout@v4
+          with:
+            lfs: true
+            fetch-depth: 0
+            fetch-tags: true
+        - uses: pnpm/action-setup@v4
+          with:
+            version: 9
+        - uses: actions/setup-node@v4
+          with:
+            node-version: "20"
+            cache: "pnpm"
+        - name: Install modules
+          run: pnpm install --frozen-lockfile
+        - uses: actions/download-artifact@v4
+          with:
+            path: artifacts
+        - name: Move artifacts
+          run: |
+            mv artifacts/build dist/
+            
+            cp -r artifacts/llama.cpp/llama.cpp llama/llama.cpp
+  
+            rm -f ./llama/binariesGithubRelease.json
+            mv artifacts/llama.cpp/binariesGithubRelease.json ./llama/binariesGithubRelease.json
+  
+            rm -f ./llama/llama.cpp.info.json
+            mv artifacts/llama.cpp/llama.cpp.info.json ./llama/llama.cpp.info.json
+        - name: Resolve docs version
+          env:
+            RELEASE_VERSION: ${{ needs.release.outputs.package-version || needs.resolve-next-release.outputs.next-version }}
+          run: |
+            if [ "$RELEASE_VERSION" == "false" ]; then
+              pnpm vite-node ./scripts/resolveLatestReleaseVersion.ts --saveVersionToFile ./docsVersion.txt
+            else
+              echo "$RELEASE_VERSION" > ./docsVersion.txt
+            fi
+        - name: Generate docs with updated version
+          env:
+            DOCS_URL_BASE: "/"
+          run: |
+            export DOCS_PACKAGE_VERSION="$(cat ./docsVersion.txt)"
+            echo "Package version: $DOCS_PACKAGE_VERSION"
+            
+            pnpm run docs:build      - name: Upload docs to GitHub Pages
         uses: actions/upload-pages-artifact@v3
         with:
           name: pages-docs
@@ -854,18 +881,22 @@ jobs:
 
     # All steps are copied to `update-documentation-website` job
     # Can be replaced with YAML anchors when this will be supported by GitHub Actions:
-    # https://github.com/actions/runner/issues/1182#issuecomment-2317953582
+    # https://github.com/actions/runner/issues/1182#comment-2317953582
     steps:
       - uses: actions/checkout@v4
         with:
           lfs: true
           fetch-depth: 0
           fetch-tags: true
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: "pnpm"
       - name: Install modules
-        run: npm ci
+        run: pnpm install --frozen-lockfile
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
@@ -885,7 +916,7 @@ jobs:
           RELEASE_VERSION: ${{ needs.release.outputs.package-version || needs.resolve-next-release.outputs.next-version }}
         run: |
           if [ "$RELEASE_VERSION" == "false" ]; then
-            npx --no vite-node ./scripts/resolveLatestReleaseVersion.ts --saveVersionToFile ./docsVersion.txt
+            pnpm vite-node ./scripts/resolveLatestReleaseVersion.ts --saveVersionToFile ./docsVersion.txt
           else
             echo "$RELEASE_VERSION" > ./docsVersion.txt
           fi
@@ -896,7 +927,7 @@ jobs:
           export DOCS_PACKAGE_VERSION="$(cat ./docsVersion.txt)"
           echo "Package version: $DOCS_PACKAGE_VERSION"
 
-          npm run docs:build
+          pnpm run docs:build
       - name: Upload docs to GitHub Pages
         uses: actions/upload-pages-artifact@v3
         with:
