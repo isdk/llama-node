@@ -1,9 +1,9 @@
 import path from "path";
-import {fileURLToPath} from "url";
+import { fileURLToPath } from "url";
 import yargs from "yargs";
-import {hideBin} from "yargs/helpers";
+import { hideBin } from "yargs/helpers";
 import fs from "fs-extra";
-import {$, cd} from "zx";
+import { $, cd } from "zx";
 import envVar from "env-var";
 
 const env = envVar.from(process.env);
@@ -13,8 +13,8 @@ const GH_RELEASE_REF = env.get("GH_RELEASE_REF")
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const packageDirectory = path.join(__dirname, "..", "packages");
-const packageScope = "@node-llama-cpp";
-const subPackagesDirectory = path.join(packageDirectory, packageScope);
+const prebuiltPackageDir = "prebuilt-llama-node";
+const subPackagesDirectory = path.join(packageDirectory, prebuiltPackageDir);
 
 const argv = await yargs(hideBin(process.argv))
     .option("packageVersion", {
@@ -23,7 +23,7 @@ const argv = await yargs(hideBin(process.argv))
     })
     .argv;
 
-const {packageVersion} = argv;
+const { packageVersion } = argv;
 if (packageVersion === "")
     throw new Error("packageVersion is empty");
 
@@ -46,17 +46,17 @@ for (const packageName of packageNames) {
 
     const packageJson = await fs.readJson(packagePackageJsonPath);
     packageJson.version = packageVersion;
-    await fs.writeJson(packagePackageJsonPath, packageJson, {spaces: 2});
-    console.info(`Updated "${packageScope}/${packageName}/package.json" to version "${packageVersion}"`);
+    await fs.writeJson(packagePackageJsonPath, packageJson, { spaces: 2 });
+    console.info(`Updated "${prebuiltPackageDir}/${packageName}/package.json" to version "${packageVersion}"`);
 
     $.verbose = true;
     cd(packagePath);
 
     if (GH_RELEASE_REF === "refs/heads/beta") {
-        console.info(`Publishing "${packageScope}/${packageName}@${packageVersion}" to "beta" tag`);
-        await $`npm publish --tag beta`;
+        console.info(`Publishing "${prebuiltPackageDir}/${packageName}@${packageVersion}" to "beta" tag`);
+        await $`npm publish --access public --tag beta`;
     } else {
-        console.info(`Publishing "${packageScope}/${packageName}@${packageVersion}"`);
-        await $`npm publish`;
+        console.info(`Publishing "${prebuiltPackageDir}/${packageName}@${packageVersion}"`);
+        await $`npm publish --access public`;
     }
 }
