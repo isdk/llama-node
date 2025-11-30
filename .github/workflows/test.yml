@@ -1,0 +1,47 @@
+name: Test
+on:
+  push:
+    branches:
+      - master
+      - beta
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install modules
+        run: npm ci
+      - name: ESLint
+        run: npx eslint
+      - name: TypeScript validity
+        run: npm run test:typescript
+
+  compile-docs:
+    name: Test docs compilation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+          fetch-depth: 0
+          fetch-tags: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install modules
+        run: npm ci
+      - name: Build
+        run: npm run build
+      - name: Download latest llama.cpp release
+        env:
+          CI: true
+        run: node ./dist/cli/cli.js source download --release latest --skipBuild --noBundle --noUsageExample --updateBinariesReleaseMetadataAndSaveGitBundle
+      - name: Compile docs
+        run: npm run docs:build
