@@ -21,9 +21,15 @@
   "engines": {
     "node": ">=20.0.0"
   },
-  "os": ["linux"],
-  "cpu": ["x64"],
-  "libc": ["glibc"],
+  "os": [
+    "linux"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "libc": [
+    "glibc"
+  ],
   "scripts": {
     "prebuild": "rimraf ./dist ./tsconfig.tsbuildinfo",
     "build": "tsc --build tsconfig.json --force",
@@ -33,13 +39,13 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/withcatai/node-llama-cpp.git"
+    "url": "git+https://github.com/isdk/llama-node.git"
   },
   "author": "Gilad S.",
   "license": "MIT",
   "preferUnplugged": true,
   "bugs": {
-    "url": "https://github.com/withcatai/node-llama-cpp/issues"
+    "url": "https://github.com/isdk/llama-node/issues"
   },
   "homepage": "https://node-llama-cpp.withcat.ai",
   "devDependencies": {
