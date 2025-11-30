@@ -1,7 +1,7 @@
 {
-  "name": "@node-llama-cpp/linux-x64-vulkan",
+  "name": "@isdk/llama-node-linux-armv7l",
   "version": "0.1.0",
-  "description": "Prebuilt binary for node-llama-cpp for Linux x64 with Vulkan support",
+  "description": "Prebuilt binary for node-llama-cpp for Linux armv7l",
   "main": "dist/index.js",
   "type": "module",
   "files": [
@@ -22,7 +22,7 @@
     "node": ">=20.0.0"
   },
   "os": ["linux"],
-  "cpu": ["x64"],
+  "cpu": ["arm", "x64"],
   "libc": ["glibc"],
   "scripts": {
     "prebuild": "rimraf ./dist ./tsconfig.tsbuildinfo",

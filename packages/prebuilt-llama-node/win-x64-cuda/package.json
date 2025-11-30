@@ -1,7 +1,7 @@
 {
-  "name": "@node-llama-cpp/win-x64-cuda-ext",
+  "name": "@isdk/llama-node-win-x64-cuda",
   "version": "0.1.0",
-  "description": "Extension of @node-llama-cpp/win-x64-cuda - prebuilt binary for node-llama-cpp for Windows x64 with CUDA support",
+  "description": "Prebuilt binary for node-llama-cpp for Windows x64 with CUDA support",
   "main": "dist/index.js",
   "type": "module",
   "files": [

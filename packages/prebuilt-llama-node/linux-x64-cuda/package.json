@@ -1,5 +1,5 @@
 {
-  "name": "@node-llama-cpp/linux-x64-cuda",
+  "name": "@isdk/llama-node-linux-x64-cuda",
   "version": "0.1.0",
   "description": "Prebuilt binary for node-llama-cpp for Linux x64 with CUDA support",
   "main": "dist/index.js",
