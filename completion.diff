@@ -1,0 +1,184 @@
+diff --git a/llama/addon/AddonModel.cpp b/llama/addon/AddonModel.cpp
+index d25d043..6e31911 100644
+--- a/llama/addon/AddonModel.cpp
++++ b/llama/addon/AddonModel.cpp
+@@ -1,3 +1,4 @@
++#include <thread>
+ #include <sstream>
+ #include "addonGlobals.h"
+ #include "globals/addonLog.h"
+@@ -418,6 +419,117 @@ Napi::Value AddonModel::Dispose(const Napi::CallbackInfo& info) {
+     }
+ }
+ 
++Napi::Value AddonModel::Completion(const Napi::CallbackInfo& info) {
++    if (disposed) {
++        Napi::Error::New(info.Env(), "Model is disposed").ThrowAsJavaScriptException();
++        return info.Env().Undefined();
++    }
++    llama_context_params context_params = llama_context_default_params();
++
++    std::string prompt = info[0].As<Napi::String>().Utf8Value();
++    // find the number of tokens in the prompt
++    const int n_prompt = -llama_tokenize(vocab, prompt.c_str(), prompt.size(), NULL, 0, true, true);
++
++    // allocate space for the tokens and tokenize the prompt
++    std::vector<llama_token> prompt_tokens(n_prompt);
++    if (llama_tokenize(vocab, prompt.c_str(), prompt.size(), prompt_tokens.data(), prompt_tokens.size(), true, true) < 0) {
++        Napi::Error::New(info.Env(), "Failed to tokenize the prompt").ThrowAsJavaScriptException();
++        return info.Env().Undefined();
++    }
++
++    if (info.Length() > 1 && info[1].IsObject()) {
++        Napi::Object options = info[1].As<Napi::Object>();
++        if (options.Has("contextSize")) {
++            context_params.n_ctx = options.Get("contextSize").As<Napi::Number>().Uint32Value();
++        }
++
++        if (options.Has("batchSize")) {
++            context_params.n_batch = options.Get("batchSize").As<Napi::Number>().Uint32Value();
++            // context_params.n_ubatch = context_params.n_batch; // the batch queue is managed in the JS side, so there's no need for managing it on the C++ side
++        }
++
++        if (options.Has("sequences")) {
++            context_params.n_seq_max = options.Get("sequences").As<Napi::Number>().Uint32Value();
++        }
++
++        if (options.Has("embeddings")) {
++            context_params.embeddings = options.Get("embeddings").As<Napi::Boolean>().Value();
++        }
++
++        if (options.Has("ranking") && options.Get("ranking").As<Napi::Boolean>().Value()) {
++            context_params.pooling_type = LLAMA_POOLING_TYPE_RANK;
++        }
++
++        if (options.Has("flashAttention")) {
++            context_params.flash_attn = options.Get("flashAttention").As<Napi::Boolean>().Value();
++        }
++
++        if (options.Has("threads")) {
++            const auto n_threads = options.Get("threads").As<Napi::Number>().Int32Value();
++            const auto resolved_n_threads = n_threads == 0 ? std::max((int32_t)std::thread::hardware_concurrency(), context_params.n_threads) : n_threads;
++
++            context_params.n_threads = resolved_n_threads;
++            context_params.n_threads_batch = resolved_n_threads;
++        }
++
++        if (options.Has("performanceTracking")) {
++            context_params.no_perf = !(options.Get("performanceTracking").As<Napi::Boolean>().Value());
++        }
++    }
++    llama_context * ctx = llama_init_from_model(model, context_params);
++    if (ctx == NULL) {
++        Napi::Error::New(info.Env(), "Failed to create the llama_context").ThrowAsJavaScriptException();
++        return info.Env().Undefined();
++    }
++    auto sparams = llama_sampler_chain_default_params();
++    sparams.no_perf = false;
++    llama_sampler * smpl = llama_sampler_chain_init(sparams);
++    llama_sampler_chain_add(smpl, llama_sampler_init_greedy());
++
++    int32_t n_predict = context_params.n_ctx - n_prompt;
++    llama_batch batch = llama_batch_get_one(prompt_tokens.data(), prompt_tokens.size());
++    int n_decode = 0;
++    llama_token new_token_id;
++    std::string _result = "";
++    for (int n_pos = 0; n_pos + batch.n_tokens < n_prompt + n_predict; ) {
++        // evaluate the current batch with the transformer model
++        if (llama_decode(ctx, batch)) {
++            Napi::Error::New(info.Env(), "Failed to Decode token").ThrowAsJavaScriptException();
++            return info.Env().Undefined();
++        }
++
++        n_pos += batch.n_tokens;
++
++        // sample the next token
++        {
++            new_token_id = llama_sampler_sample(smpl, ctx, -1);
++
++            // is it an end of generation?
++            if (llama_vocab_is_eog(vocab, new_token_id)) {
++                break;
++            }
++
++            char buf[128];
++            int n = llama_token_to_piece(vocab, new_token_id, buf, sizeof(buf), 0, true);
++            if (n < 0) {
++                Napi::Error::New(info.Env(), "Failed to convert token to piece").ThrowAsJavaScriptException();
++                return info.Env().Undefined();
++            }
++            std::string s(buf, n);
++            printf("%s", s.c_str());
++            fflush(stdout);
++            _result += s;
++
++            // prepare the next batch with the sampled token
++            batch = llama_batch_get_one(&new_token_id, 1);
++
++            n_decode += 1;
++        }
++    }
++
++    return Napi::String::New(info.Env(), _result);
++}
++
+ Napi::Value AddonModel::Tokenize(const Napi::CallbackInfo& info) {
+     if (disposed) {
+         Napi::Error::New(info.Env(), "Model is disposed").ThrowAsJavaScriptException();
+@@ -657,6 +769,7 @@ void AddonModel::init(Napi::Object exports) {
+                 InstanceMethod("init", &AddonModel::Init),
+                 InstanceMethod("loadLora", &AddonModel::LoadLora),
+                 InstanceMethod("abortActiveModelLoad", &AddonModel::AbortActiveModelLoad),
++                InstanceMethod("completion", &AddonModel::Completion),
+                 InstanceMethod("tokenize", &AddonModel::Tokenize),
+                 InstanceMethod("detokenize", &AddonModel::Detokenize),
+                 InstanceMethod("getTrainContextSize", &AddonModel::GetTrainContextSize),
+diff --git a/llama/addon/AddonModel.h b/llama/addon/AddonModel.h
+index b6661d3..fec151e 100644
+--- a/llama/addon/AddonModel.h
++++ b/llama/addon/AddonModel.h
+@@ -35,6 +35,7 @@ class AddonModel : public Napi::ObjectWrap<AddonModel> {
+         Napi::Value LoadLora(const Napi::CallbackInfo& info);
+         Napi::Value AbortActiveModelLoad(const Napi::CallbackInfo& info);
+         Napi::Value Dispose(const Napi::CallbackInfo& info);
++        Napi::Value Completion(const Napi::CallbackInfo& info);
+         Napi::Value Tokenize(const Napi::CallbackInfo& info);
+         Napi::Value Detokenize(const Napi::CallbackInfo& info);
+         Napi::Value GetTrainContextSize(const Napi::CallbackInfo& info);
+diff --git a/src/bindings/AddonTypes.ts b/src/bindings/AddonTypes.ts
+index c88c1af..5632e83 100644
+--- a/src/bindings/AddonTypes.ts
++++ b/src/bindings/AddonTypes.ts
+@@ -92,6 +92,7 @@ export type AddonModel = {
+     loadLora(lora: AddonModelLora): Promise<void>,
+     abortActiveModelLoad(): void,
+     dispose(): Promise<void>,
++    completion(prompt: string, options?: any): string,
+     tokenize(text: string, specialTokens: boolean): Uint32Array,
+     detokenize(tokens: Uint32Array, specialTokens?: boolean): string,
+     getTrainContextSize(): number,
+diff --git a/src/evaluator/LlamaModel/LlamaModel.ts b/src/evaluator/LlamaModel/LlamaModel.ts
+index ae0275e..77db347 100644
+--- a/src/evaluator/LlamaModel/LlamaModel.ts
++++ b/src/evaluator/LlamaModel/LlamaModel.ts
+@@ -244,6 +244,7 @@ export class LlamaModel {
+         this._removeLoraUsage = this._removeLoraUsage.bind(this);
+ 
+         this.tokenize = this.tokenize.bind(this);
++        this.completion = this.completion.bind(this);
+         this.detokenize = this.detokenize.bind(this);
+         this.isSpecialToken = this.isSpecialToken.bind(this);
+         this.isEogToken = this.isEogToken.bind(this);
+@@ -317,6 +318,12 @@ export class LlamaModel {
+         return this._defaultContextFlashAttention;
+     }
+ 
++    public completion(prompt: string, options?: any): string {
++        this._ensureNotDisposed();
++        const result = this._model.completion(prompt, options);
++        return result;
++    }
++
+     /**
+      * Transform text into tokens that can be fed to the model
+      * @param text - the text to tokenize
