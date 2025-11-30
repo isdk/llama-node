@@ -642,304 +642,304 @@ jobs:
           if [ -f .semanticRelease.npmPackage.deployedVersion.txt ]; then
             echo "package-version=$(cat .semanticRelease.npmPackage.deployedVersion.txt)" >> $GITHUB_OUTPUT
           fi
-      - name: Prepare `create-node-llama-cpp` module
-        if: steps.set-npm-url.outputs.npm-url != ''
-        run: |
-          export DEPLOYED_PACKAGE_VERSION=$(cat .semanticRelease.npmPackage.deployedVersion.txt)
+      # - name: Prepare `create-node-llama-cpp` module
+      #   if: steps.set-npm-url.outputs.npm-url != ''
+      #   run: |
+      #     export DEPLOYED_PACKAGE_VERSION=$(cat .semanticRelease.npmPackage.deployedVersion.txt)
 
-          pushd packages/create-node-llama-cpp
-          pnpm install --ignore-scripts
-          popd
+      #     pushd packages/create-node-llama-cpp
+      #     pnpm install --ignore-scripts
+      #     popd
 
-          pnpm vite-node ./scripts/prepareCreateNodeLlamaCppModuleForPublish.ts --packageVersion "$DEPLOYED_PACKAGE_VERSION"
+      #     pnpm vite-node ./scripts/prepareCreateNodeLlamaCppModuleForPublish.ts --packageVersion "$DEPLOYED_PACKAGE_VERSION"
 
-          pushd packages/create-node-llama-cpp
-          pnpm run build
-      - name: Release `create-node-llama-cpp` module
-        if: steps.set-npm-url.outputs.npm-url != ''
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-          GH_RELEASE_REF: ${{ github.ref }}
-        run: |
-          cd packages/create-node-llama-cpp
+      #     pushd packages/create-node-llama-cpp
+      #     pnpm run build
+      # - name: Release `create-node-llama-cpp` module
+      #   if: steps.set-npm-url.outputs.npm-url != ''
+      #   env:
+      #     NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      #     GH_RELEASE_REF: ${{ github.ref }}
+      #   run: |
+      #     cd packages/create-node-llama-cpp
 
-          echo "//registry.npmjs.org/:_authToken=\${NPM_TOKEN}" > ~/.npmrc
+      #     echo "//registry.npmjs.org/:_authToken=\${NPM_TOKEN}" > ~/.npmrc
 
-          if [ "$GH_RELEASE_REF" == "refs/heads/beta" ]; then
-              pnpm publish --access public --tag beta
-          else
-              pnpm publish --access public
-          fi
-  auto-approve-documentation-website-deployment:
-    name: Auto-approve documentation website deployment
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    needs:
-      - release
-    steps:
-      - name: Approve documentation website deployment
-        uses: activescott/automate-environment-deployment-approval@v1.0.6
-        with:
-          github_token: ${{ secrets.AUTO_APPROVAL_GITHUB_TOKEN }}
-          environment_allow_list: "Documentation website"
-          actor_allow_list: giladgd
+      #     if [ "$GH_RELEASE_REF" == "refs/heads/beta" ]; then
+      #         pnpm publish --access public --tag beta
+      #     else
+      #         pnpm publish --access public
+      #     fi
+  # auto-approve-documentation-website-deployment:
+  #   name: Auto-approve documentation website deployment
+  #   runs-on: ubuntu-latest
+  #   continue-on-error: true
+  #   needs:
+  #     - release
+  #   steps:
+  #     - name: Approve documentation website deployment
+  #       uses: activescott/automate-environment-deployment-approval@v1.0.6
+  #       with:
+  #         github_token: ${{ secrets.AUTO_APPROVAL_GITHUB_TOKEN }}
+  #         environment_allow_list: "Documentation website"
+  #         actor_allow_list: giladgd
 
-  build-electron-example:
-    name: Build & release Electron app example - ${{ matrix.config.name }}
-    needs:
-      - release
-    if: needs.release.outputs.package-version != ''
-    runs-on: ${{ matrix.config.os }}
-    permissions:
-      contents: write
-    strategy:
-      fail-fast: false
-      matrix:
-        config:
-          - name: "Windows"
-            os: windows-2022
-          - name: "Ubuntu"
-            os: ubuntu-22.04
-          - name: "macOS"
-            os: macos-13
+  # build-electron-example:
+  #   name: Build & release Electron app example - ${{ matrix.config.name }}
+  #   needs:
+  #     - release
+  #   if: needs.release.outputs.package-version != ''
+  #   runs-on: ${{ matrix.config.os }}
+  #   permissions:
+  #     contents: write
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       config:
+  #         - name: "Windows"
+  #           os: windows-2022
+  #         - name: "Ubuntu"
+  #           os: ubuntu-22.04
+  #         - name: "macOS"
+  #           os: macos-13
 
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          lfs: true
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "pnpm"
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #       with:
+  #         lfs: true
+  #     - uses: pnpm/action-setup@v4
+  #       with:
+  #         version: 10
+  #     - uses: actions/setup-node@v4
+  #       with:
+  #         node-version: "20"
+  #         cache: "pnpm"
 
-      - name: Install dependencies on Ubuntu
-        if: matrix.config.name == 'Ubuntu'
-        run: |
-          sudo apt-get update
-          sudo apt-get install libarchive-tools rpm
-          sudo snap install snapcraft --classic
+  #     - name: Install dependencies on Ubuntu
+  #       if: matrix.config.name == 'Ubuntu'
+  #       run: |
+  #         sudo apt-get update
+  #         sudo apt-get install libarchive-tools rpm
+  #         sudo snap install snapcraft --classic
 
-      - name: Install modules
-        run: pnpm install
+  #     - name: Install modules
+  #       run: pnpm install
 
-      - name: Create Electron app project
-        shell: bash
-        env:
-          DEPLOYED_PACKAGE_VERSION: ${{ needs.release.outputs.package-version }}
-          NODE_LLAMA_CPP_SKIP_DOWNLOAD: true
-        run: |
-          pnpm vite-node ./scripts/scaffoldElectronExampleForCiBuild.ts --packageVersion "$DEPLOYED_PACKAGE_VERSION" --packageFolderPath ./electron-app-example
-          cd electron-app-example
-          pnpm install
+  #     - name: Create Electron app project
+  #       shell: bash
+  #       env:
+  #         DEPLOYED_PACKAGE_VERSION: ${{ needs.release.outputs.package-version }}
+  #         NODE_LLAMA_CPP_SKIP_DOWNLOAD: true
+  #       run: |
+  #         pnpm vite-node ./scripts/scaffoldElectronExampleForCiBuild.ts --packageVersion "$DEPLOYED_PACKAGE_VERSION" --packageFolderPath ./electron-app-example
+  #         cd electron-app-example
+  #         pnpm install
 
-      - name: Build electron app
-        id: build
-        shell: bash
-        timeout-minutes: 480
-        run: |
-          cd electron-app-example
-          pnpm run build
-          ls ./release
+  #     - name: Build electron app
+  #       id: build
+  #       shell: bash
+  #       timeout-minutes: 480
+  #       run: |
+  #         cd electron-app-example
+  #         pnpm run build
+  #         ls ./release
 
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          include-hidden-files: true
-          name: "electron-app-example-${{ matrix.config.name }}"
-          path: "./electron-app-example/release"
+  #     - name: Upload artifacts
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         include-hidden-files: true
+  #         name: "electron-app-example-${{ matrix.config.name }}"
+  #         path: "./electron-app-example/release"
 
-      - name: Add builds to current release
-        shell: bash
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_TAG: ${{ needs.release.outputs.package-version }}
-        run: |
-          shopt -s nullglob
+  #     - name: Add builds to current release
+  #       shell: bash
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #         RELEASE_TAG: ${{ needs.release.outputs.package-version }}
+  #       run: |
+  #         shopt -s nullglob
 
-          for file in ./electron-app-example/release/*.{dmg,zip,exe,appx,AppImage,snap,assert,deb,tar.gz}; do
-            echo "Adding $file to release $RELEASE_TAG"
-            gh release upload "v$RELEASE_TAG" "$file"
-          done
+  #         for file in ./electron-app-example/release/*.{dmg,zip,exe,appx,AppImage,snap,assert,deb,tar.gz}; do
+  #           echo "Adding $file to release $RELEASE_TAG"
+  #           gh release upload "v$RELEASE_TAG" "$file"
+  #         done
 
-          shopt -u nullglob
+  #         shopt -u nullglob
 
-  update-documentation-website:
-    name: Update documentation website
-    if: |
-      always() &&
-      github.event_name == 'push' &&
-      github.ref == 'refs/heads/main' &&
-      needs.build.result == 'success' &&
-      needs.resolve-next-release.result == 'success' &&
-      needs.resolve-next-release.outputs.next-version != '' &&
-      needs.resolve-next-release.outputs.next-version != 'false' && (
-        needs.release.result == 'skipped' || (
-          needs.release.result == 'success' &&
-          needs.release.outputs.package-version != ''
-        )
-      )
-    runs-on: ubuntu-latest
-    concurrency: update-documentation-website-${{ github.ref }}
-    environment:
-      name: Documentation website
-      url: "https://node-llama-cpp.withcat.ai"
-    permissions:
-      pages: write
-      id-token: write
-      contents: read
-    needs:
-      - build
-      - resolve-next-release
-      - release
+  # update-documentation-website:
+  #   name: Update documentation website
+  #   if: |
+  #     always() &&
+  #     github.event_name == 'push' &&
+  #     github.ref == 'refs/heads/main' &&
+  #     needs.build.result == 'success' &&
+  #     needs.resolve-next-release.result == 'success' &&
+  #     needs.resolve-next-release.outputs.next-version != '' &&
+  #     needs.resolve-next-release.outputs.next-version != 'false' && (
+  #       needs.release.result == 'skipped' || (
+  #         needs.release.result == 'success' &&
+  #         needs.release.outputs.package-version != ''
+  #       )
+  #     )
+  #   runs-on: ubuntu-latest
+  #   concurrency: update-documentation-website-${{ github.ref }}
+  #   environment:
+  #     name: Documentation website
+  #     url: "https://node-llama-cpp.withcat.ai"
+  #   permissions:
+  #     pages: write
+  #     id-token: write
+  #     contents: read
+  #   needs:
+  #     - build
+  #     - resolve-next-release
+  #     - release
 
-    # All steps are copied to `update-documentation-website-no-release` job
-    # Can be replaced with YAML anchors when this will be supported by GitHub Actions:
-    # https://github.com/actions/runner/issues/1182#issuecomment-2317953582
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          lfs: true
-          fetch-depth: 0
-          fetch-tags: true
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "pnpm"
-      - name: Install modules
-        run: pnpm install
-      - uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-      - name: Move artifacts
-        run: |
-          mv artifacts/build dist/
+  #   # All steps are copied to `update-documentation-website-no-release` job
+  #   # Can be replaced with YAML anchors when this will be supported by GitHub Actions:
+  #   # https://github.com/actions/runner/issues/1182#issuecomment-2317953582
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #       with:
+  #         lfs: true
+  #         fetch-depth: 0
+  #         fetch-tags: true
+  #     - uses: pnpm/action-setup@v4
+  #       with:
+  #         version: 10
+  #     - uses: actions/setup-node@v4
+  #       with:
+  #         node-version: "20"
+  #         cache: "pnpm"
+  #     - name: Install modules
+  #       run: pnpm install
+  #     - uses: actions/download-artifact@v4
+  #       with:
+  #         path: artifacts
+  #     - name: Move artifacts
+  #       run: |
+  #         mv artifacts/build dist/
 
-          cp -r artifacts/llama.cpp/llama.cpp llama/llama.cpp
+  #         cp -r artifacts/llama.cpp/llama.cpp llama/llama.cpp
 
-          rm -f ./llama/binariesGithubRelease.json
-          mv artifacts/llama.cpp/binariesGithubRelease.json ./llama/binariesGithubRelease.json
+  #         rm -f ./llama/binariesGithubRelease.json
+  #         mv artifacts/llama.cpp/binariesGithubRelease.json ./llama/binariesGithubRelease.json
 
-          rm -f ./llama/llama.cpp.info.json
-          mv artifacts/llama.cpp/llama.cpp.info.json ./llama/llama.cpp.info.json
-      - name: Resolve docs version
-        env:
-          RELEASE_VERSION: ${{ needs.release.outputs.package-version || needs.resolve-next-release.outputs.next-version }}
-        run: |
-          if [ "$RELEASE_VERSION" == "false" ]; then
-            pnpm vite-node ./scripts/resolveLatestReleaseVersion.ts --saveVersionToFile ./docsVersion.txt
-          else
-            echo "$RELEASE_VERSION" > ./docsVersion.txt
-          fi
-      - name: Generate docs with updated version
-        env:
-          DOCS_URL_BASE: "/"
-        run: |
-          export DOCS_PACKAGE_VERSION="$(cat ./docsVersion.txt)"
-          echo "Package version: $DOCS_PACKAGE_VERSION"
+  #         rm -f ./llama/llama.cpp.info.json
+  #         mv artifacts/llama.cpp/llama.cpp.info.json ./llama/llama.cpp.info.json
+  #     - name: Resolve docs version
+  #       env:
+  #         RELEASE_VERSION: ${{ needs.release.outputs.package-version || needs.resolve-next-release.outputs.next-version }}
+  #       run: |
+  #         if [ "$RELEASE_VERSION" == "false" ]; then
+  #           pnpm vite-node ./scripts/resolveLatestReleaseVersion.ts --saveVersionToFile ./docsVersion.txt
+  #         else
+  #           echo "$RELEASE_VERSION" > ./docsVersion.txt
+  #         fi
+  #     - name: Generate docs with updated version
+  #       env:
+  #         DOCS_URL_BASE: "/"
+  #       run: |
+  #         export DOCS_PACKAGE_VERSION="$(cat ./docsVersion.txt)"
+  #         echo "Package version: $DOCS_PACKAGE_VERSION"
 
-          pnpm run docs:build
-      - name: Upload docs to GitHub Pages
-        uses: actions/upload-pages-artifact@v3
-        with:
-          name: pages-docs
-          path: docs-site
-      - name: Deploy docs to GitHub Pages
-        uses: actions/deploy-pages@v4
-        with:
-          artifact_name: pages-docs
-      - name: Update feed
-        run: |
-          curl -X POST "https://pubsubhubbub.appspot.com/" -H "Content-Type: application/x-www-form-urlencoded" --data-urlencode "hub.mode=publish" --data-urlencode "hub.url=https://node-llama-cpp.withcat.ai/blog/feed.atom"
+  #         pnpm run docs:build
+  #     - name: Upload docs to GitHub Pages
+  #       uses: actions/upload-pages-artifact@v3
+  #       with:
+  #         name: pages-docs
+  #         path: docs-site
+  #     - name: Deploy docs to GitHub Pages
+  #       uses: actions/deploy-pages@v4
+  #       with:
+  #         artifact_name: pages-docs
+  #     - name: Update feed
+  #       run: |
+  #         curl -X POST "https://pubsubhubbub.appspot.com/" -H "Content-Type: application/x-www-form-urlencoded" --data-urlencode "hub.mode=publish" --data-urlencode "hub.url=https://node-llama-cpp.withcat.ai/blog/feed.atom"
 
-  update-documentation-website-no-release:
-    name: Update documentation website - no version release
-    if: |
-      always() &&
-      github.event_name == 'push' &&
-      github.ref == 'refs/heads/main' &&
-      needs.build.result == 'success' &&
-      needs.resolve-next-release.result == 'success' &&
-      needs.resolve-next-release.outputs.next-version == 'false'
-    runs-on: ubuntu-latest
-    concurrency: update-documentation-website-${{ github.ref }}
-    environment:
-      name: Documentation website
-      url: "https://node-llama-cpp.withcat.ai"
-    permissions:
-      pages: write
-      id-token: write
-      contents: read
-    needs:
-      - build
-      - resolve-next-release
+  # update-documentation-website-no-release:
+  #   name: Update documentation website - no version release
+  #   if: |
+  #     always() &&
+  #     github.event_name == 'push' &&
+  #     github.ref == 'refs/heads/main' &&
+  #     needs.build.result == 'success' &&
+  #     needs.resolve-next-release.result == 'success' &&
+  #     needs.resolve-next-release.outputs.next-version == 'false'
+  #   runs-on: ubuntu-latest
+  #   concurrency: update-documentation-website-${{ github.ref }}
+  #   environment:
+  #     name: Documentation website
+  #     url: "https://node-llama-cpp.withcat.ai"
+  #   permissions:
+  #     pages: write
+  #     id-token: write
+  #     contents: read
+  #   needs:
+  #     - build
+  #     - resolve-next-release
 
-    # All steps are copied to `update-documentation-website` job
-    # Can be replaced with YAML anchors when this will be supported by GitHub Actions:
-    # https://github.com/actions/runner/issues/1182#comment-2317953582
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          lfs: true
-          fetch-depth: 0
-          fetch-tags: true
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "pnpm"
-      - name: Install modules
-        run: pnpm install
-      - uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-      - name: Move artifacts
-        run: |
-          mv artifacts/build dist/
+  #   # All steps are copied to `update-documentation-website` job
+  #   # Can be replaced with YAML anchors when this will be supported by GitHub Actions:
+  #   # https://github.com/actions/runner/issues/1182#comment-2317953582
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #       with:
+  #         lfs: true
+  #         fetch-depth: 0
+  #         fetch-tags: true
+  #     - uses: pnpm/action-setup@v4
+  #       with:
+  #         version: 10
+  #     - uses: actions/setup-node@v4
+  #       with:
+  #         node-version: "20"
+  #         cache: "pnpm"
+  #     - name: Install modules
+  #       run: pnpm install
+  #     - uses: actions/download-artifact@v4
+  #       with:
+  #         path: artifacts
+  #     - name: Move artifacts
+  #       run: |
+  #         mv artifacts/build dist/
 
-          cp -r artifacts/llama.cpp/llama.cpp llama/llama.cpp
+  #         cp -r artifacts/llama.cpp/llama.cpp llama/llama.cpp
 
-          rm -f ./llama/binariesGithubRelease.json
-          mv artifacts/llama.cpp/binariesGithubRelease.json ./llama/binariesGithubRelease.json
+  #         rm -f ./llama/binariesGithubRelease.json
+  #         mv artifacts/llama.cpp/binariesGithubRelease.json ./llama/binariesGithubRelease.json
 
-          rm -f ./llama/llama.cpp.info.json
-          mv artifacts/llama.cpp/llama.cpp.info.json ./llama/llama.cpp.info.json
-      - name: Resolve docs version
-        env:
-          RELEASE_VERSION: ${{ needs.release.outputs.package-version || needs.resolve-next-release.outputs.next-version }}
-        run: |
-          if [ "$RELEASE_VERSION" == "false" ]; then
-            pnpm vite-node ./scripts/resolveLatestReleaseVersion.ts --saveVersionToFile ./docsVersion.txt
-          else
-            echo "$RELEASE_VERSION" > ./docsVersion.txt
-          fi
-      - name: Generate docs with updated version
-        env:
-          DOCS_URL_BASE: "/"
-        run: |
-          export DOCS_PACKAGE_VERSION="$(cat ./docsVersion.txt)"
-          echo "Package version: $DOCS_PACKAGE_VERSION"
+  #         rm -f ./llama/llama.cpp.info.json
+  #         mv artifacts/llama.cpp/llama.cpp.info.json ./llama/llama.cpp.info.json
+  #     - name: Resolve docs version
+  #       env:
+  #         RELEASE_VERSION: ${{ needs.release.outputs.package-version || needs.resolve-next-release.outputs.next-version }}
+  #       run: |
+  #         if [ "$RELEASE_VERSION" == "false" ]; then
+  #           pnpm vite-node ./scripts/resolveLatestReleaseVersion.ts --saveVersionToFile ./docsVersion.txt
+  #         else
+  #           echo "$RELEASE_VERSION" > ./docsVersion.txt
+  #         fi
+  #     - name: Generate docs with updated version
+  #       env:
+  #         DOCS_URL_BASE: "/"
+  #       run: |
+  #         export DOCS_PACKAGE_VERSION="$(cat ./docsVersion.txt)"
+  #         echo "Package version: $DOCS_PACKAGE_VERSION"
 
-          pnpm run docs:build
-      - name: Upload docs to GitHub Pages
-        uses: actions/upload-pages-artifact@v3
-        with:
-          name: pages-docs
-          path: docs-site
-      - name: Deploy docs to GitHub Pages
-        uses: actions/deploy-pages@v4
-        with:
-          artifact_name: pages-docs
-      - name: Update feed
-        run: |
-          curl -X POST "https://pubsubhubbub.appspot.com/" -H "Content-Type: application/x-www-form-urlencoded" --data-urlencode "hub.mode=publish" --data-urlencode "hub.url=https://node-llama-cpp.withcat.ai/blog/feed.atom"
+  #         pnpm run docs:build
+  #     - name: Upload docs to GitHub Pages
+  #       uses: actions/upload-pages-artifact@v3
+  #       with:
+  #         name: pages-docs
+  #         path: docs-site
+  #     - name: Deploy docs to GitHub Pages
+  #       uses: actions/deploy-pages@v4
+  #       with:
+  #         artifact_name: pages-docs
+  #     - name: Update feed
+  #       run: |
+  #         curl -X POST "https://pubsubhubbub.appspot.com/" -H "Content-Type: application/x-www-form-urlencoded" --data-urlencode "hub.mode=publish" --data-urlencode "hub.url=https://node-llama-cpp.withcat.ai/blog/feed.atom"
 
 #  fix-broken-github-release:
 #    name: Fix broken GitHub release
