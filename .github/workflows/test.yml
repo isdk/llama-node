@@ -13,15 +13,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: "pnpm"
       - name: Install modules
-        run: npm ci
+        run: pnpm install --frozen-lockfile
       - name: ESLint
-        run: npx eslint
+        run: pnpm eslint
       - name: TypeScript validity
-        run: npm run test:typescript
+        run: pnpm run test:typescript
 
   compile-docs:
     name: Test docs compilation
@@ -32,16 +36,20 @@ jobs:
           lfs: true
           fetch-depth: 0
           fetch-tags: true
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: "pnpm"
       - name: Install modules
-        run: npm ci
+        run: pnpm install --frozen-lockfile
       - name: Build
-        run: npm run build
+        run: pnpm run build
       - name: Download latest llama.cpp release
         env:
           CI: true
         run: node ./dist/cli/cli.js source download --release latest --skipBuild --noBundle --noUsageExample --updateBinariesReleaseMetadataAndSaveGitBundle
       - name: Compile docs
-        run: npm run docs:build
+        run: pnpm run docs:build

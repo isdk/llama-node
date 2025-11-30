@@ -1,34 +1,34 @@
-import {useMemo} from "react";
+import { useMemo } from "react";
 import classNames from "classnames";
-import {LlmState, SimplifiedModelChatItem} from "../../../../electron/state/llmState.ts";
-import {UserMessage} from "./components/UserMessage/UserMessage.js";
-import {ModelMessage} from "./components/ModelMessage/ModelMessage.js";
+import { ChatMessage } from "../../../../electron/state/llmState.ts";
+import { UserMessage } from "./components/UserMessage/UserMessage.js";
+import { ModelMessage } from "./components/ModelMessage/ModelMessage.js";
 
 import "./ChatHistory.css";
 
 
-export function ChatHistory({simplifiedChat, generatingResult, className}: ChatHistoryProps) {
+export function ChatHistory({ chatHistory, generatingResult, className }: ChatHistoryProps) {
     const renderChatItems = useMemo(() => {
-        if (simplifiedChat.length > 0 &&
-            simplifiedChat.at(-1)!.type !== "model" &&
+        if (chatHistory.length > 0 &&
+            chatHistory.at(-1)!.role !== "assistant" &&
             generatingResult
         )
-            return [...simplifiedChat, emptyModelMessage];
+            return [...chatHistory, emptyAssistantMessage];
 
-        return simplifiedChat;
-    }, [simplifiedChat, generatingResult]);
+        return chatHistory;
+    }, [chatHistory, generatingResult]);
 
     return <div className={classNames("appChatHistory", className)}>
         {
             renderChatItems
                 .map((item, index) => {
-                    if (item.type === "model")
+                    if (item.role === "assistant")
                         return <ModelMessage
                             key={index}
-                            modelMessage={item}
+                            message={item}
                             active={index === renderChatItems.length - 1 && generatingResult}
                         />;
-                    else if (item.type === "user")
+                    else if (item.role === "user")
                         return <UserMessage key={index} message={item} />;
 
                     return null;
@@ -38,12 +38,12 @@ export function ChatHistory({simplifiedChat, generatingResult, className}: ChatH
 }
 
 type ChatHistoryProps = {
-    simplifiedChat: LlmState["chatSession"]["simplifiedChat"],
+    chatHistory: ChatMessage[],
     generatingResult: boolean,
     className?: string
 };
 
-const emptyModelMessage: SimplifiedModelChatItem = {
-    type: "model",
-    message: []
+const emptyAssistantMessage: ChatMessage = {
+    role: "assistant",
+    content: ""
 };

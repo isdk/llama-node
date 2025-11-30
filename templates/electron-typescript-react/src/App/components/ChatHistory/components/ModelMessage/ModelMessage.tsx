@@ -1,60 +1,28 @@
-import {MessageMarkdown} from "../../../MessageMarkdown/MessageMarkdown.js";
-import {SimplifiedModelChatItem} from "../../../../../../electron/state/llmState.js";
-import {ModelResponseThought} from "../ModelResponseThought/ModelResponseThought.js";
-import {ModelResponseComment} from "../ModelResponseComment/ModelResponseComment.js";
-import {ModelMessageCopyButton} from "./components/ModelMessageCopyButton/ModelMessageCopyButton.js";
+import { MessageMarkdown } from "../../../MessageMarkdown/MessageMarkdown.js";
+import { ChatMessage } from "../../../../../../electron/state/llmState.js";
+import { ModelMessageCopyButton } from "./components/ModelMessageCopyButton/ModelMessageCopyButton.js";
 
 import "./ModelMessage.css";
 
-export function ModelMessage({modelMessage, active}: ModelMessageProps) {
+export function ModelMessage({ message, active }: ModelMessageProps) {
     return <div className="message model">
+        <MessageMarkdown
+            activeDot={active}
+            className="text"
+        >
+            {message.content}
+        </MessageMarkdown>
         {
-            modelMessage.message.map((message, responseIndex) => {
-                const isLastMessage = responseIndex === modelMessage.message.length - 1;
-
-                if (message.type === "segment") {
-                    if (message.segmentType === "thought")
-                        return <ModelResponseThought
-                            key={responseIndex}
-                            text={message.text}
-                            active={isLastMessage && active}
-                            duration={
-                                (message.startTime != null && message.endTime != null)
-                                    ? (new Date(message.endTime).getTime() - new Date(message.startTime).getTime())
-                                    : undefined
-                            }
-                        />;
-                    else if (message.segmentType === "comment")
-                        return <ModelResponseComment
-                            key={responseIndex}
-                            text={message.text}
-                            active={isLastMessage && active}
-                        />;
-                    else
-                        // ensure we handle all segment types or TypeScript will complain
-                        void (message.segmentType satisfies never);
-                }
-
-                return <MessageMarkdown
-                    key={responseIndex}
-                    activeDot={isLastMessage && active}
-                    className="text"
-                >
-                    {message.text}
-                </MessageMarkdown>;
-            })
-        }
-        {
-            (modelMessage.message.length === 0 && active) &&
+            (message.content === "" && active) &&
             <MessageMarkdown className="text" activeDot />
         }
         <div className="buttons" inert={active}>
-            <ModelMessageCopyButton modelMessage={modelMessage.message} />
+            <ModelMessageCopyButton content={message.content} />
         </div>
     </div>;
 }
 
 type ModelMessageProps = {
-    modelMessage: SimplifiedModelChatItem,
+    message: ChatMessage,
     active: boolean
 };

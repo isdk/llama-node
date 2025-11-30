@@ -1,108 +1,320 @@
 <div align="center">
-    <a href="https://node-llama-cpp.withcat.ai" target="_blank"><img alt="node-llama-cpp Logo" src="https://raw.githubusercontent.com/withcatai/node-llama-cpp/master/assets/logo.v3.roundEdges.avif" width="360px" /></a>
-    <h1>node-llama-cpp</h1>
-    <p>Run AI models locally on your machine</p>
-    <sub>Pre-built bindings are provided with a fallback to building from source with cmake</sub>
+    <h1>@isdk/llama-node</h1>
+    <p>Low-level Node.js bindings for llama.cpp</p>
+    <sub>Core library for running LLM models locally with native performance and hardware acceleration</sub>
     <p></p>
 </div>
 
 <div align="center" class="main-badges">
 
-[![Build](https://github.com/withcatai/node-llama-cpp/actions/workflows/build.yml/badge.svg)](https://github.com/withcatai/node-llama-cpp/actions/workflows/build.yml)
-[![License](https://badgen.net/badge/color/MIT/green?label=license)](https://www.npmjs.com/package/node-llama-cpp)
-[![Types](https://badgen.net/badge/color/TypeScript/blue?label=types)](https://www.npmjs.com/package/node-llama-cpp)
-[![Version](https://badgen.net/npm/v/node-llama-cpp)](https://www.npmjs.com/package/node-llama-cpp)
+[![License](https://badgen.net/badge/color/MIT/green?label=license)](https://www.npmjs.com/package/@isdk/llama-node)
+[![Types](https://badgen.net/badge/color/TypeScript/blue?label=types)](https://www.npmjs.com/package/@isdk/llama-node)
+[![Version](https://badgen.net/npm/v/@isdk/llama-node)](https://www.npmjs.com/package/@isdk/llama-node)
 
 </div>
 
-✨ [`gpt-oss` is here!](https://node-llama-cpp.withcat.ai/blog/v3.12-gpt-oss) ✨
+## Overview
+
+`@isdk/llama-node` is a **low-level core library** that provides direct Node.js bindings to [llama.cpp](https://github.com/ggml-org/llama.cpp). This package is designed for developers who need fine-grained control over LLM inference, tokenization, embeddings, and grammar-based generation.
+
+This is the **core foundation** extracted from the original `node-llama-cpp` project, focusing on essential bindings and low-level APIs without high-level abstractions like chat sessions or conversation management.
 
 ## Features
-* Run LLMs locally on your machine
-* [Metal, CUDA and Vulkan support](https://node-llama-cpp.withcat.ai/guide/#gpu-support)
-* [Pre-built binaries are provided](https://node-llama-cpp.withcat.ai/guide/building-from-source), with a fallback to building from source _**without**_ `node-gyp` or Python
-* [Adapts to your hardware automatically](https://node-llama-cpp.withcat.ai/guide/#gpu-support), no need to configure anything
-* A Complete suite of everything you need to use LLMs in your projects
-* [Use the CLI to chat with a model without writing any code](#try-it-without-installing)
-* Up-to-date with the latest `llama.cpp`. Download and compile the latest release with a [single CLI command](https://node-llama-cpp.withcat.ai//guide/building-from-source#downloading-a-release)
-* Enforce a model to generate output in a parseable format, [like JSON](https://node-llama-cpp.withcat.ai/guide/chat-session#json-response), or even force it to [follow a specific JSON schema](https://node-llama-cpp.withcat.ai/guide/chat-session#response-json-schema)
-* [Provide a model with functions it can call on demand](https://node-llama-cpp.withcat.ai/guide/chat-session#function-calling) to retrieve information or perform actions
-* [Embedding and reranking support](https://node-llama-cpp.withcat.ai/guide/embedding)
-* [Safe against special token injection attacks](https://node-llama-cpp.withcat.ai/guide/llama-text#input-safety-in-node-llama-cpp)
-* Great developer experience with full TypeScript support, and [complete documentation](https://node-llama-cpp.withcat.ai/guide/)
-* Much more
 
-## [Documentation](https://node-llama-cpp.withcat.ai)
-* [Getting started guide](https://node-llama-cpp.withcat.ai/guide/)
-* [API reference](https://node-llama-cpp.withcat.ai/api/functions/getLlama)
-* [CLI help](https://node-llama-cpp.withcat.ai/cli/)
-* [Blog](https://node-llama-cpp.withcat.ai/blog/)
-* [Changelog](https://github.com/withcatai/node-llama-cpp/releases)
-* [Roadmap](https://github.com/orgs/withcatai/projects/1)
-
-## Try It Without Installing
-Chat with a model in your terminal using [a single command](https://node-llama-cpp.withcat.ai/cli/chat):
-```bash
-npx -y node-llama-cpp chat
-```
+* **Native Performance**: Direct C++ bindings to llama.cpp for maximum performance
+* **Hardware Acceleration**: Full support for Metal (macOS), CUDA (NVIDIA), and Vulkan (cross-platform GPU)
+* **Pre-built Binaries**: Platform-specific binaries included for immediate use
+* **Automatic Hardware Detection**: Adapts to your system's capabilities automatically
+* **Core Functionality**:
+  - Model loading and management
+  - Context creation and sequence evaluation
+  - Tokenization and detokenization
+  - Embeddings and reranking
+  - Grammar-based generation (GBNF, JSON Schema)
+  - LoRA adapter support
+  - GGUF file inspection and metadata reading
+* **TypeScript First**: Complete type definitions for excellent developer experience
+* **Low-level Control**: Direct access to context sequences, token evaluation, and batching
+* **Safe Token Handling**: Protection against special token injection attacks
 
 ## Installation
+
 ```bash
-npm install node-llama-cpp
+npm install @isdk/llama-node
 ```
 
-[This package comes with pre-built binaries](https://node-llama-cpp.withcat.ai/guide/building-from-source) for macOS, Linux and Windows.
+Pre-built binaries are provided for:
+- **macOS**: x64, arm64 (Metal support)
+- **Linux**: x64, arm64, armv7l (CUDA, Vulkan variants)
+- **Windows**: x64, arm64 (CUDA, Vulkan variants)
 
-If binaries are not available for your platform, it'll fallback to download a release of `llama.cpp` and build it from source with `cmake`.
-To disable this behavior, set the environment variable `NODE_LLAMA_CPP_SKIP_DOWNLOAD` to `true`.
+If binaries are not available for your platform, the package will automatically build from source using `cmake`.
 
-## Usage
+## Quick Start
+
+### Basic Model Loading and Text Completion
+
 ```typescript
-import {fileURLToPath} from "url";
+import { getLlama, LlamaModel, LlamaContext, LlamaCompletion } from "@isdk/llama-node";
 import path from "path";
-import {getLlama, LlamaChatSession} from "node-llama-cpp";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
+// Initialize llama.cpp bindings
 const llama = await getLlama();
+
+// Load a model
 const model = await llama.loadModel({
-    modelPath: path.join(__dirname, "models", "Meta-Llama-3.1-8B-Instruct.Q4_K_M.gguf")
+    modelPath: path.join(__dirname, "models", "llama-2-7b.Q4_K_M.gguf")
 });
-const context = await model.createContext();
-const session = new LlamaChatSession({
+
+// Create a context for inference
+const context = await model.createContext({
+    contextSize: 4096
+});
+
+// Create a completion generator
+const completion = new LlamaCompletion({
     contextSequence: context.getSequence()
 });
 
+// Generate text
+const result = await completion.generateCompletion({
+    prompt: "The meaning of life is",
+    maxTokens: 100
+});
 
-const q1 = "Hi there, how are you?";
-console.log("User: " + q1);
-
-const a1 = await session.prompt(q1);
-console.log("AI: " + a1);
-
-
-const q2 = "Summarize what you said";
-console.log("User: " + q2);
-
-const a2 = await session.prompt(q2);
-console.log("AI: " + a2);
+console.log(result.text);
 ```
 
-> For more examples, see the [getting started guide](https://node-llama-cpp.withcat.ai/guide/)
+### Tokenization and Detokenization
+
+```typescript
+import { getLlama } from "@isdk/llama-node";
+
+const llama = await getLlama();
+const model = await llama.loadModel({ modelPath: "model.gguf" });
+
+// Tokenize text
+const tokens = model.tokenize("Hello, world!");
+console.log("Tokens:", tokens);
+
+// Detokenize back to text
+const text = model.detokenize(tokens);
+console.log("Text:", text);
+```
+
+### Embeddings
+
+```typescript
+import { getLlama, LlamaEmbeddingContext } from "@isdk/llama-node";
+
+const llama = await getLlama();
+const model = await llama.loadModel({
+    modelPath: "embedding-model.gguf"
+});
+
+// Create embedding context
+const embeddingContext = await model.createEmbeddingContext();
+
+// Generate embeddings
+const embedding = await embeddingContext.getEmbeddingFor("Sample text");
+console.log("Embedding vector:", embedding.vector);
+```
+
+### Grammar-Based Generation (JSON Schema)
+
+```typescript
+import {
+    getLlama,
+    LlamaJsonSchemaGrammar,
+    LlamaCompletion
+} from "@isdk/llama-node";
+
+const llama = await getLlama();
+const model = await llama.loadModel({ modelPath: "model.gguf" });
+const context = await model.createContext();
+
+// Define JSON schema
+const schema = {
+    type: "object",
+    properties: {
+        name: { type: "string" },
+        age: { type: "number" },
+        hobbies: {
+            type: "array",
+            items: { type: "string" }
+        }
+    },
+    required: ["name", "age"]
+} as const;
+
+// Create grammar from schema
+const grammar = new LlamaJsonSchemaGrammar(llama, schema);
+
+// Generate with grammar constraints
+const completion = new LlamaCompletion({
+    contextSequence: context.getSequence()
+});
+
+const result = await completion.generateCompletion({
+    prompt: "Generate a person profile:",
+    grammar,
+    maxTokens: 200
+});
+
+const parsed = JSON.parse(result.text);
+console.log("Structured output:", parsed);
+```
+
+### GGUF File Inspection
+
+```typescript
+import { readGgufFileInfo, GgufInsights } from "@isdk/llama-node";
+
+// Read GGUF metadata
+const fileInfo = await readGgufFileInfo("model.gguf");
+console.log("Architecture:", fileInfo.metadata.general.architecture);
+console.log("Parameter count:", fileInfo.metadata.general.parameterCount);
+
+// Get resource requirements
+const insights = await GgufInsights.from("model.gguf");
+const requirements = insights.configurationResolver.resolveAndScoreConfig();
+console.log("Recommended context size:", requirements.contextSize);
+console.log("Estimated VRAM usage:", requirements.gpuLayers);
+```
+
+## Core API Overview
+
+### Main Classes
+
+- **`Llama`**: Main entry point for llama.cpp bindings
+- **`LlamaModel`**: Represents a loaded GGUF model
+- **`LlamaContext`**: Inference context for text generation
+- **`LlamaContextSequence`**: Manages token sequences within a context
+- **`LlamaEmbeddingContext`**: Context for generating embeddings
+- **`LlamaRankingContext`**: Context for text reranking
+- **`LlamaCompletion`**: Text completion generator
+- **`LlamaGrammar`**: GBNF grammar for constrained generation
+- **`LlamaJsonSchemaGrammar`**: JSON Schema to GBNF converter
+- **`TokenBias`**: Control token sampling probabilities
+- **`TokenMeter`**: Track token usage and performance
+
+### Utilities
+
+- **`getLlama()`**: Initialize and get Llama instance
+- **`readGgufFileInfo()`**: Read GGUF file metadata
+- **`GgufInsights`**: Analyze model requirements
+- **`resolveModelFile()`**: Resolve and download models
+- **`LlamaText`**: Safe text handling with special token support
+
+## CLI Tools
+
+The package includes a CLI for common tasks:
+
+```bash
+# Inspect GGUF file
+npx llama-node inspect gguf model.gguf
+
+# Download llama.cpp source
+npx llama-node source download
+
+# Build from source
+npx llama-node source build
+```
+
+## Hardware Acceleration
+
+The package automatically detects and uses available hardware acceleration:
+
+- **macOS**: Metal (Apple Silicon and Intel with Metal support)
+- **Linux/Windows**: CUDA (NVIDIA GPUs), Vulkan (AMD, Intel, NVIDIA)
+- **CPU**: Optimized CPU inference with SIMD support
+
+No configuration needed - the appropriate binary is selected at runtime.
+
+## Environment Variables
+
+- `NODE_LLAMA_CPP_SKIP_DOWNLOAD`: Skip automatic source download/build
+- `NODE_LLAMA_CPP_GPU`: Override GPU type selection
+- `NODE_LLAMA_CPP_LOG_LEVEL`: Set logging verbosity
+
+## TypeScript Support
+
+Full TypeScript definitions are included. The library is written in TypeScript and provides excellent IntelliSense support.
+
+```typescript
+import type {
+    Token,
+    Tokenizer,
+    LlamaContextOptions,
+    LlamaModelOptions,
+    GgufMetadata
+} from "@isdk/llama-node";
+```
+
+## Differences from node-llama-cpp
+
+This package is the **low-level core** extracted from `node-llama-cpp`:
+
+**Included:**
+- ✅ Native bindings to llama.cpp
+- ✅ Model loading and context management
+- ✅ Tokenization/detokenization
+- ✅ Embeddings and reranking
+- ✅ Grammar-based generation
+- ✅ GGUF file utilities
+- ✅ Low-level completion API
+
+**Not Included (available in higher-level packages):**
+- ❌ Chat sessions and conversation management
+- ❌ Chat history and message formatting
+- ❌ Function calling abstractions
+- ❌ High-level prompt templates
+- ❌ Interactive chat CLI
+
+## Requirements
+
+- **Node.js**: >= 20.0.0
+- **TypeScript**: >= 5.0.0 (optional, for development)
+
+## Building from Source
+
+If pre-built binaries are not available:
+
+```bash
+# Download llama.cpp source
+npx llama-node source download
+
+# Build with cmake
+npx llama-node source build
+```
+
+Requirements for building:
+- CMake >= 3.26
+- C++17 compatible compiler
+- CUDA Toolkit (for CUDA support)
+- Vulkan SDK (for Vulkan support)
 
 ## Contributing
-To contribute to `node-llama-cpp` read the [contribution guide](https://node-llama-cpp.withcat.ai/guide/contributing).
+
+Contributions are welcome! This is a core library, so we focus on:
+- Stability and performance
+- Low-level API completeness
+- Comprehensive TypeScript types
+- Cross-platform compatibility
 
 ## Acknowledgements
-* llama.cpp: [ggml-org/llama.cpp](https://github.com/ggml-org/llama.cpp)
 
+* **llama.cpp**: [ggml-org/llama.cpp](https://github.com/ggml-org/llama.cpp)
+* **Original project**: [withcatai/node-llama-cpp](https://github.com/withcatai/node-llama-cpp)
 
-<br />
+## License
 
-<div align="center" width="360">
-    <img alt="Star please" src="https://raw.githubusercontent.com/withcatai/node-llama-cpp/master/assets/star.please.roundEdges.png" width="360" margin="auto" />
-    <br/>
-    <p align="right">
-        <i>If you like this repo, star it ✨</i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+MIT
+
+---
+
+<div align="center">
+    <p>
+        <i>Built with ❤️ for the Node.js and LLM community</i>
     </p>
 </div>
