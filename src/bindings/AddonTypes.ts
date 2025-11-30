@@ -118,17 +118,17 @@ export interface AddonModelCompletionParams {
     mirostatTau: number,
     logitBias: Array<{token: string, bias: number}>,
     grammar: string,
-    [name: string]: any,
+    [name: string]: any
 }
 
 export interface AddonModelCompletionResult {
     content: string,
-    params: AddonModelCompletionParams,
+    params: AddonModelCompletionParams
 }
 
 export type Optional<T> = {
     [P in keyof T]?: T[P];
-}
+};
 
 export type AddonModel = {
     init(): Promise<boolean>,

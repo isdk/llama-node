@@ -57,6 +57,7 @@ import {
     type Token, type Tokenizer, type Detokenizer,
     type LLamaContextualRepeatPenalty
 } from "./types.js";
+
 import {
     type GbnfJsonArraySchema, type GbnfJsonBasicSchema, type GbnfJsonConstSchema, type GbnfJsonEnumSchema, type GbnfJsonStringSchema,
     type GbnfJsonBasicStringSchema, type GbnfJsonFormatStringSchema, type GbnfJsonObjectSchema, type GbnfJsonOneOfSchema,
@@ -77,6 +78,8 @@ import type { LlamaClasses } from "./utils/getLlamaClasses.js";
 
 
 export {
+    type Token, type Tokenizer, type Detokenizer,
+    type LLamaContextualRepeatPenalty,
     Llama,
     getLlama,
     getLlamaGpuTypes,

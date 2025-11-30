@@ -60,7 +60,7 @@
     "test:typescript": "tsc --noEmit --project tsconfig.json",
     "lint": "pnpm run lint:eslint",
     "lint:eslint": "eslint --report-unused-disable-directives .",
-    "format": "pnpm run lint:eslint -- --fix",
+    "format": "pnpm run lint:eslint --fix",
     "dev:setup:downloadAllTestModels": "vite-node test/utils/scripts/downloadAllTestModels.ts",
     "dev:setup": "pnpm run build && node ./dist/cli/cli.js source download --noUsageExample && pnpm run docs:generateTypedoc && pnpm run dev:setup:downloadAllTestModels",
     "dev:build": "pnpm run build && node ./dist/cli/cli.js source build --noUsageExample",
