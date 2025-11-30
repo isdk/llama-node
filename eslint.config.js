@@ -23,7 +23,7 @@ export default tseslint.config({
         "llama/",
         "docs-site/",
         "templates/",
-        ".vitepress/.cache/",
+        ".vitepress/**",
         "packages/create-node-llama-cpp/dist/",
         "packages/@node-llama-cpp/*/dist/",
         ".releaserc.ts",

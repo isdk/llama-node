@@ -117,11 +117,11 @@ export function isModelUri(modelUri: string) {
 
 export async function resolveParsedModelUri(
     modelUri: ParsedModelUri,
-    options?: { tokens?: ModelFileAccessTokens, endpoints?: ModelDownloadEndpoints, signal?: AbortSignal, authorizationHeader?: string }
+    options?: {tokens?: ModelFileAccessTokens, endpoints?: ModelDownloadEndpoints, signal?: AbortSignal, authorizationHeader?: string}
 ): Promise<ResolvedParsedModelUri>;
 export async function resolveParsedModelUri(
     modelUri: ParsedModelUri | undefined | null,
-    options?: { tokens?: ModelFileAccessTokens, endpoints?: ModelDownloadEndpoints, signal?: AbortSignal, authorizationHeader?: string }
+    options?: {tokens?: ModelFileAccessTokens, endpoints?: ModelDownloadEndpoints, signal?: AbortSignal, authorizationHeader?: string}
 ): Promise<ResolvedParsedModelUri | undefined | null>;
 export async function resolveParsedModelUri(
     modelUri: ParsedModelUri | undefined | null,

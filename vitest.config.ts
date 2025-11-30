@@ -4,7 +4,7 @@ export default defineConfig({
     test: {
         exclude: [
             "**/node_modules/**",
-            "llama/**",
+            "llama/**"
         ],
         pool: "forks",
         maxWorkers: 1,
