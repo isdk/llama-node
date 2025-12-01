@@ -240,6 +240,46 @@ importers:
       zx:
         specifier: ^8.5.4
         version: 8.8.5
+    optionalDependencies:
+      '@isdk/llama-node-linux-arm64':
+        specifier: 0.1.0
+        version: link:packages/prebuilt-llama-node/linux-arm64
+      '@isdk/llama-node-linux-armv7l':
+        specifier: 0.1.0
+        version: link:packages/prebuilt-llama-node/linux-armv7l
+      '@isdk/llama-node-linux-x64':
+        specifier: 0.1.0
+        version: link:packages/prebuilt-llama-node/linux-x64
+      '@isdk/llama-node-linux-x64-cuda':
+        specifier: 0.1.0
+        version: link:packages/prebuilt-llama-node/linux-x64-cuda
+      '@isdk/llama-node-linux-x64-cuda-ext':
+        specifier: 0.1.0
+        version: link:packages/prebuilt-llama-node/linux-x64-cuda-ext
+      '@isdk/llama-node-linux-x64-vulkan':
+        specifier: 0.1.0
+        version: link:packages/prebuilt-llama-node/linux-x64-vulkan
+      '@isdk/llama-node-mac-arm64-metal':
+        specifier: 0.1.0
+        version: link:packages/prebuilt-llama-node/mac-arm64-metal
+      '@isdk/llama-node-mac-x64':
+        specifier: 0.1.0
+        version: link:packages/prebuilt-llama-node/mac-x64
+      '@isdk/llama-node-win-arm64':
+        specifier: 0.1.0
+        version: link:packages/prebuilt-llama-node/win-arm64
+      '@isdk/llama-node-win-x64':
+        specifier: 0.1.0
+        version: link:packages/prebuilt-llama-node/win-x64
+      '@isdk/llama-node-win-x64-cuda':
+        specifier: 0.1.0
+        version: link:packages/prebuilt-llama-node/win-x64-cuda
+      '@isdk/llama-node-win-x64-cuda-ext':
+        specifier: 0.1.0
+        version: link:packages/prebuilt-llama-node/win-x64-cuda-ext
+      '@isdk/llama-node-win-x64-vulkan':
+        specifier: 0.1.0
+        version: link:packages/prebuilt-llama-node/win-x64-vulkan
 
   packages/prebuilt-llama-node/linux-arm64:
     devDependencies:
