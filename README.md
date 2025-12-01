@@ -294,6 +294,51 @@ Requirements for building:
 - CUDA Toolkit (for CUDA support)
 - Vulkan SDK (for Vulkan support)
 
+## Development
+
+### Local Manual Release
+
+For developers who need to build and prepare the package locally for publishing (Linux binaries only):
+
+```bash
+# Run the automated local release script
+./scripts/local-manual-release.sh
+```
+
+This script will:
+1. ✅ Install dependencies (skipped if `node_modules` exists)
+2. ✅ Build the project (skipped if `dist` exists)
+3. ✅ Download or update llama.cpp source
+4. 🏗️ Build native binaries for your current OS
+5. 📦 Organize binaries and prepare standalone modules
+6. ✨ Prepare the package for `npm publish`
+
+After running the script, you can publish with:
+```bash
+npm publish --dry-run  # Test first
+npm publish            # Publish to npm
+```
+
+**Note**: This workflow only produces binaries for your current platform (e.g., Linux). To build Windows/macOS binaries, use GitHub Actions CI or cross-compilation tools.
+
+### Updating llama.cpp Source
+
+To update the llama.cpp source code to the latest version:
+
+```bash
+# Update llama.cpp via git pull
+npx llama-node source pull
+
+# Or download a specific release
+npx llama-node source download --release latest
+
+# Clear and start fresh
+npx llama-node source clear
+npx llama-node source download
+```
+
+The `source pull` command is particularly useful during development when you want to quickly sync with upstream llama.cpp changes without re-downloading everything.
+
 ## Contributing
 
 Contributions are welcome! This is a core library, so we focus on:
