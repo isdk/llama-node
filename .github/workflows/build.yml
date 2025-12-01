@@ -110,6 +110,7 @@ jobs:
       - name: Install dependencies on Ubuntu (1)
         if: matrix.config.name == 'Ubuntu (1)'
         run: |
+          sudo bash .github/scripts/setup-apt-mirror.sh || true
           sudo apt-get update
           sudo apt-get install ninja-build libtbb-dev g++-aarch64-linux-gnu gcc-aarch64-linux-gnu g++-arm-linux-gnueabihf gcc-arm-linux-gnueabihf
 
@@ -128,6 +129,7 @@ jobs:
       - name: Install dependencies on Ubuntu (2)
         if: matrix.config.name == 'Ubuntu (2)'
         run: |
+          sudo bash .github/scripts/setup-apt-mirror.sh || true
           sudo apt-get update
           sudo apt-get install ninja-build libtbb-dev
 
@@ -194,6 +196,7 @@ jobs:
       - name: Install Vulkan SDK on Ubuntu
         if: matrix.config.name == 'Ubuntu (1)'
         run: |
+          sudo bash .github/scripts/setup-apt-mirror.sh || true
           wget -qO- https://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo tee /etc/apt/trusted.gpg.d/lunarg.asc
           sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-jammy.list https://packages.lunarg.com/vulkan/lunarg-vulkan-jammy.list
           sudo apt update
@@ -361,8 +364,8 @@ jobs:
           path: llama
       - name: Apply fix patch on semantic-release, to not check for push permission on dry run
         run: |
-          git apply --ignore-whitespace ./scripts/patches/semantic-release+24.1.1.patch
-          git apply --ignore-whitespace ./scripts/patches/@semantic-release+npm+12.0.1.patch
+          patch -p1 --ignore-whitespace < ./scripts/patches/semantic-release+24.1.1.patch
+          patch -p1 --ignore-whitespace < ./scripts/patches/@semantic-release+npm+13.1.2.patch
       - name: Resolve next release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -413,6 +416,7 @@ jobs:
 
       - name: Install dependencies on ubuntu
         run: |
+          sudo bash .github/scripts/setup-apt-mirror.sh || true
           sudo apt-get update
           sudo apt-get install ninja-build cmake
 
@@ -576,7 +580,7 @@ jobs:
           echo "//registry.npmjs.org/:_authToken=\${NPM_TOKEN}" > ~/.npmrc
           export DRY_RUN_RESULT_FILE_PATH="$(pwd)/semanticReleaseDryRunReleaseResult.json"
 
-          git apply --ignore-whitespace ./scripts/patches/@semantic-release+github+11.0.0.patch
+          patch -p1 --ignore-whitespace < ./scripts/patches/@semantic-release+github+11.0.0.patch
           pnpm semantic-release
       - name: Set npm package url to GITHUB_OUTPUT
         id: set-npm-url
