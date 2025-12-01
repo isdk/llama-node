@@ -1,10 +1,10 @@
-import {fileURLToPath} from "url";
+import { fileURLToPath } from "url";
 import * as path from "path";
 import * as os from "os";
 import process from "process";
 import envVar from "env-var";
-import {nanoid} from "nanoid";
-import {getBinariesGithubRelease} from "./bindings/utils/binariesGithubRelease.js";
+import { nanoid } from "nanoid";
+import { getBinariesGithubRelease } from "./bindings/utils/binariesGithubRelease.js";
 import {
     nodeLlamaCppGpuOptions, LlamaLogLevel, LlamaLogLevelValues, parseNodeLlamaCppGpuOption, nodeLlamaCppGpuOffStringOptions
 } from "./bindings/types.js";
@@ -115,7 +115,8 @@ export const documentationPageUrls = {
             index: documentationCliUrl + "/source",
             Download: documentationCliUrl + "/source/download",
             Build: documentationCliUrl + "/source/build",
-            Clear: documentationCliUrl + "/source/clear"
+            Clear: documentationCliUrl + "/source/clear",
+            Pull: documentationCliUrl + "/source/pull"
         }
     },
     troubleshooting: {
