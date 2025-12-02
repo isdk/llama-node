@@ -27,18 +27,18 @@ const supportedModels = {
 export const modelGroups = {
     "essential": [
         "qwen2.5-1.5b-instruct.Q4_0.gguf",
+        "stable-code-3b-Q5_K_M.gguf",
         "bge-small-en-v1.5-q8_0.gguf",
         "nomic-embed-text-v1.5.Q4_K_M.gguf",
-        "bge-reranker-v2-m3-Q8_0.gguf"
+        "bge-reranker-v2-m3-Q8_0.gguf",
+        "gemma-2-2b-it.Q4_K_M.gguf",
     ],
     "large": [
         "Meta-Llama-3-8B-Instruct-Q4_K_M.gguf",
         "lora-Llama-3-Instruct-abliteration-LoRA-8B-f16.gguf",
         "Meta-Llama-3.1-8B-Instruct.Q4_K_M.gguf",
         "Llama-3.2-3B-Instruct.Q4_K_M.gguf",
-        "gemma-2-2b-it.Q4_K_M.gguf",
         "codegemma-2b-Q4_K_M.gguf",
-        "stable-code-3b-Q5_K_M.gguf"
     ]
 } as const;
 

@@ -496,7 +496,7 @@ jobs:
       - name: Run model dependent tests
         env:
           NODE_OPTIONS: "--max-old-space-size=4096"
-        run: pnpm run test:modelDependent test/modelDependent/qwen* test/modelDependent/bge* test/modelDependent/nomic* test/modelDependent/model.test.ts
+        run: pnpm vitest run test/modelDependent/stableCode test/modelDependent/bge test/modelDependent/bgeReranker test/modelDependent/nomicEmbedText test/modelDependent/model.test.ts
 
 
   release:
