@@ -6,6 +6,17 @@ on:
       - beta
   pull_request:
   workflow_dispatch:
+    inputs:
+      skip_binaries:
+        description: '跳过二进制构建（节省90%时间）'
+        required: false
+        default: false
+        type: boolean
+      skip_release:
+        description: '跳过发布到npm'
+        required: false
+        default: true
+        type: boolean
 
 
 jobs:
@@ -54,8 +65,11 @@ jobs:
 
   build-binaries:
     name: Build binaries - ${{ matrix.config.name }}
-    # Skip binaries build if commit message contains [skip-binaries] or [skip-build]
-    if: "!contains(github.event.head_commit.message, '[skip-binaries]') && !contains(github.event.head_commit.message, '[skip-build]')"
+    # Skip if: manual trigger with skip_binaries OR commit has skip tag
+    if: |
+      (github.event_name != 'workflow_dispatch' || !inputs.skip_binaries) &&
+      !contains(github.event.head_commit.message, '[skip-binaries]') &&
+      !contains(github.event.head_commit.message, '[skip-build]')
     needs:
       - build
     runs-on: ${{ matrix.config.os }}
@@ -487,7 +501,13 @@ jobs:
 
   release:
     name: Release
-    if: needs.resolve-next-release.outputs.next-version != '' && needs.resolve-next-release.outputs.next-version != 'false'
+    # Skip release if binaries are skipped (release needs binaries) or if no next version
+    if: |
+      (github.event_name != 'workflow_dispatch' || (!inputs.skip_binaries && !inputs.skip_release)) &&
+      !contains(github.event.head_commit.message, '[skip-binaries]') &&
+      !contains(github.event.head_commit.message, '[skip-build]') &&
+      needs.resolve-next-release.outputs.next-version != '' &&
+      needs.resolve-next-release.outputs.next-version != 'false'
     runs-on: ubuntu-latest
     concurrency: release-${{ github.ref }}
     environment:
