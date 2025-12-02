@@ -13,7 +13,6 @@ const modelsFolder = path.join(__dirname, "..", ".models");
 const supportedModels = {
     "qwen2.5-1.5b-instruct.Q4_0.gguf": "https://huggingface.co/bartowski/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/Qwen2.5-1.5B-Instruct-Q4_0.gguf?download=true",
     "gemma-2-2b-it.Q4_K_M.gguf": "https://huggingface.co/bartowski/gemma-2-2b-it-GGUF/resolve/main/gemma-2-2b-it-Q4_K_M.gguf?download=true",
-    "functionary-small-v2.5.Q4_0.gguf": "https://huggingface.co/meetkai/functionary-small-v2.5-GGUF/resolve/main/functionary-small-v2.5.Q4_0.gguf?download=true",
     "stable-code-3b-Q5_K_M.gguf": "https://huggingface.co/stabilityai/stable-code-3b/resolve/main/stable-code-3b-Q5_K_M.gguf?download=true",
     "bge-small-en-v1.5-q8_0.gguf": "https://huggingface.co/CompendiumLabs/bge-small-en-v1.5-gguf/resolve/main/bge-small-en-v1.5-q8_0.gguf?download=true",
     "Meta-Llama-3-8B-Instruct-Q4_K_M.gguf": "https://huggingface.co/bartowski/Meta-Llama-3-8B-Instruct-GGUF/resolve/main/Meta-Llama-3-8B-Instruct-Q4_K_M.gguf?download=true",
@@ -22,8 +21,25 @@ const supportedModels = {
     "codegemma-2b-Q4_K_M.gguf": "https://huggingface.co/bartowski/codegemma-2b-GGUF/resolve/main/codegemma-2b-Q4_K_M.gguf?download=true",
     "Llama-3.2-3B-Instruct.Q4_K_M.gguf": "https://huggingface.co/mradermacher/Llama-3.2-3B-Instruct-GGUF/resolve/main/Llama-3.2-3B-Instruct.Q4_K_M.gguf?download=true",
     "nomic-embed-text-v1.5.Q4_K_M.gguf": "https://huggingface.co/nomic-ai/nomic-embed-text-v1.5-GGUF/resolve/main/nomic-embed-text-v1.5.Q4_K_M.gguf?download=true",
-    "bge-reranker-v2-m3-Q8_0.gguf": "https://huggingface.co/gpustack/bge-reranker-v2-m3-GGUF/resolve/main/bge-reranker-v2-m3-Q8_0.gguf?download=true",
-    "Qwen3-0.6B-Q8_0.gguf": "https://huggingface.co/Qwen/Qwen3-0.6B-GGUF/resolve/main/Qwen3-0.6B-Q8_0.gguf?download=true"
+    "bge-reranker-v2-m3-Q8_0.gguf": "https://huggingface.co/gpustack/bge-reranker-v2-m3-GGUF/resolve/main/bge-reranker-v2-m3-Q8_0.gguf?download=true"
+} as const;
+
+export const modelGroups = {
+    "essential": [
+        "qwen2.5-1.5b-instruct.Q4_0.gguf",
+        "bge-small-en-v1.5-q8_0.gguf",
+        "nomic-embed-text-v1.5.Q4_K_M.gguf",
+        "bge-reranker-v2-m3-Q8_0.gguf"
+    ],
+    "large": [
+        "Meta-Llama-3-8B-Instruct-Q4_K_M.gguf",
+        "lora-Llama-3-Instruct-abliteration-LoRA-8B-f16.gguf",
+        "Meta-Llama-3.1-8B-Instruct.Q4_K_M.gguf",
+        "Llama-3.2-3B-Instruct.Q4_K_M.gguf",
+        "gemma-2-2b-it.Q4_K_M.gguf",
+        "codegemma-2b-Q4_K_M.gguf",
+        "stable-code-3b-Q5_K_M.gguf"
+    ]
 } as const;
 
 export async function getModelFile(modelName: keyof typeof supportedModels) {
@@ -61,12 +77,32 @@ export async function getModelFile(modelName: keyof typeof supportedModels) {
     });
 }
 
-export async function downloadAllModels() {
+export async function downloadAllModels(options: {
+    groups?: (keyof typeof modelGroups)[]
+} = {}) {
     const existingModels = new Set<string>();
     const pendingDownloads: ReturnType<typeof downloadFile>[] = [];
 
-    for (const modelName of Object.keys(supportedModels)) {
-        if (supportedModels[modelName as keyof typeof supportedModels] == null)
+    const modelsToDownload = new Set<keyof typeof supportedModels>();
+
+    if (options.groups != null && options.groups.length > 0) {
+        for (const group of options.groups) {
+            const models = modelGroups[group];
+            if (models == null)
+                throw new Error(`Model group "${group}" is not supported`);
+
+            for (const modelName of models) {
+                modelsToDownload.add(modelName as keyof typeof supportedModels);
+            }
+        }
+    } else {
+        for (const modelName of Object.keys(supportedModels)) {
+            modelsToDownload.add(modelName as keyof typeof supportedModels);
+        }
+    }
+
+    for (const modelName of modelsToDownload) {
+        if (supportedModels[modelName] == null)
             continue;
 
         const modelFilePath = path.join(modelsFolder, modelName);
@@ -76,7 +112,7 @@ export async function downloadAllModels() {
             continue;
         }
 
-        const modelUrl = supportedModels[modelName as keyof typeof supportedModels];
+        const modelUrl = supportedModels[modelName];
         pendingDownloads.push(
             downloadFile({
                 url: modelUrl,
