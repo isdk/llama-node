@@ -60,7 +60,7 @@ describe("original completionSync vs LlamaCompletion", { timeout: 1000 * 60 * 10
     })
 })
 
-describe("LlamaModel", async () => {
+describe("LlamaModel", { timeout: 1000 * 60 * 10 }, async () => {
     const modelPath = await getModelFile("gemma-2-2b-it.Q4_K_M.gguf");
     const llama = await getTestLlama();
 
