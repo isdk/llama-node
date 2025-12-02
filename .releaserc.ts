@@ -1,9 +1,10 @@
-import {createRequire} from "module";
+import { createRequire } from "module";
+import { execSync } from "child_process";
 import fs from "fs-extra";
-import {getBinariesGithubRelease} from "./dist/bindings/utils/binariesGithubRelease.js";
-import {cliBinName, defaultLlamaCppGitHubRepo} from "./dist/config.js";
+import { getBinariesGithubRelease } from "./dist/bindings/utils/binariesGithubRelease.js";
+import { cliBinName, defaultLlamaCppGitHubRepo } from "./dist/config.js";
 
-import type {GlobalConfig, Result as SemanticReleaseDryRunResult} from "semantic-release";
+import type { GlobalConfig, Result as SemanticReleaseDryRunResult } from "semantic-release";
 
 const require = createRequire(import.meta.url);
 
@@ -36,18 +37,27 @@ const githubPluginConfig = {
     discussionCategoryName: "Releases" as string | boolean
 };
 
+const branches = [
+    "main"
+];
+
+try {
+    // Check if beta branch exists on remote
+    execSync("git ls-remote --exit-code --heads origin beta", { stdio: "ignore" });
+    branches.push({ name: "beta", prerelease: true } as any);
+} catch (err) {
+    // beta branch does not exist
+}
+
 const config: Omit<GlobalConfig, "repositoryUrl" | "tagFormat"> = {
-    branches: [
-        "master",
-        {name: "beta", prerelease: true}
-    ],
+    branches,
     ci: true,
     plugins: [
         ["@semantic-release/commit-analyzer", {
             preset: "angular",
             releaseRules: [
-                {type: "feat", scope: "minor", release: "patch"},
-                {type: "docs", scope: "README", release: "patch"}
+                { type: "feat", scope: "minor", release: "patch" },
+                { type: "docs", scope: "README", release: "patch" }
             ]
         }],
         ["@semantic-release/release-notes-generator", {
@@ -55,7 +65,7 @@ const config: Omit<GlobalConfig, "repositoryUrl" | "tagFormat"> = {
                 footerPartial: newFooterTemplate,
 
                 // ensure that the "Features" group comes before the "Bug Fixes" group
-                commitGroupsSort(a: {title: string}, b: {title: string}) {
+                commitGroupsSort(a: { title: string }, b: { title: string }) {
                     const order = ["Features", "Bug Fixes"];
                     const aIndex = order.indexOf(a?.title);
                     const bIndex = order.indexOf(b?.title);
