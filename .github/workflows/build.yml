@@ -15,7 +15,7 @@ on:
       skip_release:
         description: '跳过发布到npm'
         required: false
-        default: true
+        default: false
         type: boolean
 
 
@@ -344,7 +344,10 @@ jobs:
 
   resolve-next-release:
     name: Resolve next release
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/beta')
+    if: |
+      (github.event_name != 'workflow_dispatch' || (!inputs.skip_binaries && !inputs.skip_release)) &&
+      !contains(github.event.head_commit.message, '[skip-binaries]') &&
+      !contains(github.event.head_commit.message, '[skip-build]')
     runs-on: ubuntu-latest
     needs:
       - build
