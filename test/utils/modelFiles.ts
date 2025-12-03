@@ -12,7 +12,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const modelsFolder = path.join(__dirname, "..", ".models");
 const supportedModels = {
     "qwen2.5-1.5b-instruct.Q4_0.gguf": "https://huggingface.co/bartowski/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/Qwen2.5-1.5B-Instruct-Q4_0.gguf?download=true",
-    "gemma-2-2b-it.Q4_K_M.gguf": "https://huggingface.co/bartowski/gemma-2-2b-it-GGUF/resolve/main/gemma-2-2b-it-Q4_K_M.gguf?download=true",
+    "gemma-2-2b-it.IQ3_M.gguf": "https://huggingface.co/bartowski/gemma-2-2b-it-GGUF/resolve/main/gemma-2-2b-it-IQ3_M.gguf?download=true",
     "stable-code-3b-Q5_K_M.gguf": "https://huggingface.co/stabilityai/stable-code-3b/resolve/main/stable-code-3b-Q5_K_M.gguf?download=true",
     "bge-small-en-v1.5-q8_0.gguf": "https://huggingface.co/CompendiumLabs/bge-small-en-v1.5-gguf/resolve/main/bge-small-en-v1.5-q8_0.gguf?download=true",
     "Meta-Llama-3-8B-Instruct-Q4_K_M.gguf": "https://huggingface.co/bartowski/Meta-Llama-3-8B-Instruct-GGUF/resolve/main/Meta-Llama-3-8B-Instruct-Q4_K_M.gguf?download=true",
@@ -26,12 +26,10 @@ const supportedModels = {
 
 export const modelGroups = {
     "essential": [
-        "qwen2.5-1.5b-instruct.Q4_0.gguf",
         "stable-code-3b-Q5_K_M.gguf",
         "bge-small-en-v1.5-q8_0.gguf",
         "nomic-embed-text-v1.5.Q4_K_M.gguf",
         "bge-reranker-v2-m3-Q8_0.gguf",
-        "gemma-2-2b-it.Q4_K_M.gguf",
     ],
     "large": [
         "Meta-Llama-3-8B-Instruct-Q4_K_M.gguf",
@@ -39,6 +37,8 @@ export const modelGroups = {
         "Meta-Llama-3.1-8B-Instruct.Q4_K_M.gguf",
         "Llama-3.2-3B-Instruct.Q4_K_M.gguf",
         "codegemma-2b-Q4_K_M.gguf",
+        "gemma-2-2b-it.IQ3_M.gguf",
+        "qwen2.5-1.5b-instruct.Q4_0.gguf",
     ]
 } as const;
 
