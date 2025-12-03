@@ -364,6 +364,33 @@ jobs:
 
           EOF
 
+      # - name: Clean old caches
+      #   if: steps.build.outcome == 'success'
+      #   shell: bash
+      #   continue-on-error: true
+      #   env:
+      #     GH_TOKEN: ${{ github.token }}
+      #   run: |
+      #     echo "Cleaning old caches for artifact: ${{ matrix.config.artifact }}"
+
+      #     # 列出所有匹配的缓存
+      #     CACHE_KEY_PREFIX="prebuilt-binaries-${{ matrix.config.artifact }}-"
+
+      #     # 使用 gh CLI 列出并删除旧缓存
+      #     # 注意：这会删除所有匹配该前缀的缓存，新的缓存会在此步骤之后自动保存
+      #     if command -v gh &> /dev/null; then
+      #       echo "Listing caches with prefix: $CACHE_KEY_PREFIX"
+      #       gh cache list --limit 100 | grep "$CACHE_KEY_PREFIX" | cut -f1 | while read -r cache_id; do
+      #         if [ -n "$cache_id" ]; then
+      #           echo "Deleting cache: $cache_id"
+      #           gh cache delete "$cache_id" || echo "Failed to delete cache $cache_id (may already be deleted)"
+      #         fi
+      #       done
+      #       echo "Old caches cleaned"
+      #     else
+      #       echo "GitHub CLI not found, skipping cache cleanup"
+      #     fi
+
       - name: Publish artifact
         uses: actions/upload-artifact@v4
         with:
@@ -472,7 +499,7 @@ jobs:
         run: pnpm install
 
       - name: Build binary
-        run: node ./dist/cli/cli.js source build --noUsageExample
+        run: node ./dist/cli/cli.js source build --noUsageExample --gpu false
 
       - name: Run standalone tests
         run: pnpm run test:standalone
@@ -516,7 +543,7 @@ jobs:
         run: pnpm install
 
       - name: Build binary
-        run: node ./dist/cli/cli.js source build --noUsageExample
+        run: node ./dist/cli/cli.js source build --noUsageExample --gpu false
 
       - name: Inspect hardware
         run: node ./dist/cli/cli.js inspect gpu
