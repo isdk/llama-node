@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       skip_binaries:
-        description: '跳过二进制构建（节省90%时间）'
+        description: '跳过二进制构建（仅测试）'
         required: false
         default: false
         type: boolean
