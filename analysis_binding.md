@@ -63,7 +63,7 @@ If no compatible prebuilt binary is found, or if the user requests it, the proje
     -   Handles platform-specific toolchains and workarounds (e.g., Windows MSVC vs LLVM).
 
 ### 4.2 Prebuilt Binaries
--   Prebuilt binaries are distributed as separate npm packages (e.g., `@node-llama-cpp/linux-x64-cuda`).
+-   Prebuilt binaries are distributed as separate npm packages (e.g., `@isdk/llama-node-linux-x64-cuda`).
 -   `getLlama.ts` checks for these packages in `node_modules` and verifies them using `testBindingBinary.ts`.
 
 ## 5. Tests

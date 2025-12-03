@@ -1,6 +1,6 @@
 import path from "node:path";
-import {$} from "zx";
-import type {Configuration} from "electron-builder";
+import { $ } from "zx";
+import type { Configuration } from "electron-builder";
 
 const appId = "node-llama-cpp.electron.example";
 const productName = "node-llama-cpp Electron example";
@@ -38,13 +38,13 @@ export default {
         "node_modules/node-llama-cpp/bins/${os}-${arch}*/**/*",
         "!node_modules/node-llama-cpp/llama/localBuilds/**/*",
         "node_modules/node-llama-cpp/llama/localBuilds/${os}-${arch}*/**/*",
-        "!node_modules/@node-llama-cpp/*/bins/**/*",
-        "node_modules/@node-llama-cpp/${os}-${arch}*/bins/**/*"
+        "!node_modules/@isdk/llama-node-*/bins/**/*",
+        "node_modules/@isdk/llama-node-${os}-${arch}*/bins/**/*"
     ],
     asarUnpack: [
         "node_modules/node-llama-cpp/bins",
         "node_modules/node-llama-cpp/llama/localBuilds",
-        "node_modules/@node-llama-cpp/*"
+        "node_modules/@isdk/llama-node-*"
     ],
     mac: {
         target: [{

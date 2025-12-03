@@ -78,6 +78,23 @@ src/evaluator/LlamaCompletion.ts
   * 我方案是在字符串中启用`\0`包裹的字符串作为 `pure text` 不能有`special_token`, 而在其外的则可以用。
   * 这可以在formatPrompt的时候将消息内容文字进行处理: 转义内容中的“`\0`”，将内容用`\0`包裹后再进行格式化。
 
+## Build System
+
+### CUDA Version Strategy
+
+在构建流程中，我们为 Linux 和 Windows 各自构建了两个版本的 CUDA 二进制文件：
+
+1.  **Main Version (CUDA 13.0)**:
+    *   构建在 `Ubuntu (1)` 和 `Windows (1)`。
+    *   这是默认版本，位于发布的 `bins` 目录根部。
+    *   适用于安装了最新显卡驱动的用户。
+
+2.  **Fallback Version (CUDA 12.4)**:
+    *   构建在 `Ubuntu (2)` 和 `Windows (2)`。
+    *   发布时会被移动到 `fallback` 子目录（例如 `linux-x64-cuda/fallback/libggml-cuda.so`）。
+    *   **目的**: 兼容旧版显卡驱动。如果用户的驱动不支持 CUDA 13，`node-llama-cpp` 会自动尝试加载这个 fallback 版本。
+    *   这确保了更广泛的硬件兼容性，而无需强制用户升级驱动。
+
 ## Issues
 
 ### Discussion
