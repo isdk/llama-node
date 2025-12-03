@@ -16,7 +16,7 @@ for (const packageName of await fs.readdir(subPackagesDirectory)) {
 
     $.verbose = true;
     cd(packagePath);
-    await $`npm install`;
+    await $`npm install --force`;
     await $`npm run build`;
 
     const packageJson = await fs.readJson(packagePackageJsonPath);
