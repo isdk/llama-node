@@ -121,13 +121,28 @@ jobs:
           name: llama.cpp
           path: llama
 
+      - name: Get llama.cpp commit hash
+        id: llama-cpp-commit
+        shell: bash
+        run: |
+          if [ -d "llama/llama.cpp/.git" ]; then
+            COMMIT_HASH=$(cd llama/llama.cpp && git rev-parse HEAD)
+            echo "hash=$COMMIT_HASH" >> $GITHUB_OUTPUT
+            echo "llama.cpp commit: $COMMIT_HASH"
+          else
+            echo "Warning: llama.cpp git directory not found, using fallback"
+            FALLBACK_HASH=$(cat llama/llama.cpp.info.json 2>/dev/null | jq -r '.commit // .tag // "unknown"' || echo "unknown")
+            echo "hash=$FALLBACK_HASH" >> $GITHUB_OUTPUT
+            echo "llama.cpp version: $FALLBACK_HASH"
+          fi
+
       - name: Cache prebuilt binaries
         id: cache-binaries
         if: inputs.force_rebuild_binaries != true
         uses: actions/cache@v4
         with:
           path: bins
-          key: prebuilt-binaries-${{ matrix.config.artifact }}-${{ hashFiles('llama/addon/**', 'llama/CMakeLists.txt', 'llama/llama.cpp.info.json') }}
+          key: prebuilt-binaries-${{ matrix.config.artifact }}-${{ steps.llama-cpp-commit.outputs.hash }}-${{ hashFiles('llama/addon/**', 'llama/CMakeLists.txt') }}
 
       - name: Install dependencies on Windows
         if: startsWith(matrix.config.os, 'windows') && steps.cache-binaries.outputs.cache-hit != 'true'
