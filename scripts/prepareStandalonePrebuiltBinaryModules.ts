@@ -1,7 +1,7 @@
 import path from "path";
-import {fileURLToPath} from "url";
+import { fileURLToPath } from "url";
 import fs from "fs-extra";
-import {$, cd} from "zx";
+import { $, cd } from "zx";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const packageDirectory = path.join(__dirname, "..", "packages");
@@ -16,7 +16,7 @@ for (const packageName of await fs.readdir(subPackagesDirectory)) {
 
     $.verbose = true;
     cd(packagePath);
-    await $`npm ci -f`;
+    await $`npm install`;
     await $`npm run build`;
 
     const packageJson = await fs.readJson(packagePackageJsonPath);
@@ -25,7 +25,7 @@ for (const packageName of await fs.readdir(subPackagesDirectory)) {
     delete packageJson.scripts;
 
     if (postinstall != null)
-        packageJson.scripts = {postinstall};
+        packageJson.scripts = { postinstall };
 
-    await fs.writeJson(packagePackageJsonPath, packageJson, {spaces: 2});
+    await fs.writeJson(packagePackageJsonPath, packageJson, { spaces: 2 });
 }
