@@ -1,10 +1,10 @@
 import path from "path";
-import {fileURLToPath} from "url";
+import { fileURLToPath } from "url";
 import yargs from "yargs";
-import {hideBin} from "yargs/helpers";
+import { hideBin } from "yargs/helpers";
 import fs from "fs-extra";
-import {ProjectTemplate, ProjectTemplateParameter, scaffoldProjectTemplate} from "../src/cli/utils/projectTemplates.js";
-import {packedProjectTemplatesDirectory} from "../src/config.js";
+import { ProjectTemplate, ProjectTemplateParameter, scaffoldProjectTemplate } from "../src/cli/utils/projectTemplates.js";
+import { packedProjectTemplatesDirectory } from "../src/config.js";
 
 import "./packTemplates.js";
 
@@ -24,7 +24,7 @@ const argv = await yargs(hideBin(process.argv))
     })
     .argv;
 
-const {packageVersion, packageFolderPath} = argv;
+const { packageVersion, packageFolderPath } = argv;
 if (packageVersion === "")
     throw new Error("packageVersion is empty");
 
@@ -43,7 +43,7 @@ await scaffoldProjectTemplate({
     directoryPath: resolvedPackageFolderPath,
     parameters: {
         [ProjectTemplateParameter.ProjectName]: projectName,
-        [ProjectTemplateParameter.ModelUriOrUrl]: "https://github.com/withcatai/node-llama-cpp",
+        [ProjectTemplateParameter.ModelUriOrUrl]: "https://github.com/isdk/llama-node",
         [ProjectTemplateParameter.ModelUriOrFilename]: "model.gguf",
         [ProjectTemplateParameter.CurrentModuleVersion]: packageVersion
     }
@@ -55,7 +55,7 @@ packageJson.version = packageVersion;
 delete packageJson.scripts.postinstall;
 delete packageJson.scripts["models:pull"];
 
-await fs.writeJson(packageJsonPath, packageJson, {spaces: 2});
+await fs.writeJson(packageJsonPath, packageJson, { spaces: 2 });
 
 const sourceAppIconPath = path.join(__dirname, "..", "assets", "electronTemplate.icon.png");
 const appIconPath = path.join(resolvedPackageFolderPath, "public", "app-icon.png");
