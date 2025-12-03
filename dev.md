@@ -80,6 +80,132 @@ src/evaluator/LlamaCompletion.ts
 
 ## Build System
 
+### llama.cpp Version Management
+
+项目使用以下机制管理 llama.cpp 的版本：
+
+#### 版本固定位置
+
+1. **`llama/binariesGithubRelease.json`**（主要版本控制文件）
+   - 存储当前使用的 llama.cpp release 标签
+   - **已提交到 git** 仓库
+   - 内容示例：`{"release": "latest"}` 或 `{"release": "b1234"}`
+   - 通过 `src/bindings/utils/binariesGithubRelease.ts` 读写
+
+2. **`llama/llama.cpp.info.json`**（详细版本信息）
+   - 存储详细的版本信息（repo、具体 tag/commit hash、克隆时间等）
+   - **被 gitignore**，在构建时动态生成
+   - 包含 llama.cpp 仓库的完整元数据
+
+3. **`llama/llama.cpp/.git`**（源码仓库）
+   - 实际的 llama.cpp git 仓库
+   - **被 gitignore**，在构建时下载/克隆
+   - 通过 `git rev-parse HEAD` 获取精确的 commit hash
+
+4. **`src/config.ts`**（配置入口）
+   ```typescript
+   // 第 40 行
+   export const builtinLlamaCppRelease = await getBinariesGithubRelease();
+   ```
+
+#### GitHub Actions 构建缓存策略
+
+在 `.github/workflows/build.yml` 中，我们使用以下策略来缓存预构建的二进制文件：
+
+**缓存键组成**（第 124-143 行）：
+```yaml
+- name: Get llama.cpp commit hash
+  id: llama-cpp-commit
+  shell: bash
+  run: |
+    if [ -d "llama/llama.cpp/.git" ]; then
+      COMMIT_HASH=$(cd llama/llama.cpp && git rev-parse HEAD)
+      echo "hash=$COMMIT_HASH" >> $GITHUB_OUTPUT
+      echo "llama.cpp commit: $COMMIT_HASH"
+    else
+      # Fallback: 从 info.json 读取
+      FALLBACK_HASH=$(cat llama/llama.cpp.info.json 2>/dev/null | jq -r '.commit // .tag // "unknown"' || echo "unknown")
+      echo "hash=$FALLBACK_HASH" >> $GITHUB_OUTPUT
+    fi
+
+- name: Cache prebuilt binaries
+  uses: actions/cache@v4
+  with:
+    path: bins
+    key: prebuilt-binaries-${{ matrix.config.artifact }}-${{ steps.llama-cpp-commit.outputs.hash }}-${{ hashFiles('llama/addon/**', 'llama/CMakeLists.txt') }}
+```
+
+**缓存失效条件**：
+缓存只在以下情况下失效：
+1. **llama.cpp 源码实际更新**（commit hash 变化）
+2. **绑定代码变化**（`llama/addon/**` 目录下的文件变化）
+3. **构建配置变化**（`llama/CMakeLists.txt` 文件变化）
+4. **平台不同**（`matrix.config.artifact` 不同）
+
+**优势**：
+- ✅ **精确性**：使用 git commit hash 是最准确的版本标识
+- ✅ **稳定性**：同一个 commit，hash 永远不变
+- ✅ **可靠性**：只要 llama.cpp 源码没变，缓存就能命中
+- ✅ **避免假失效**：不会因为 `llama.cpp.info.json` 的重新生成而导致缓存失效
+
+#### 版本更新流程
+
+1. **本地开发**：
+   ```bash
+   # 下载最新版本
+   node ./dist/cli/cli.js source download --release latest
+
+   # 或指定版本
+   node ./dist/cli/cli.js source download --release b1234
+   ```
+
+2. **CI 构建**（`build.yml` 第 44-47 行）：
+   ```yaml
+   - name: Download latest llama.cpp release
+     env:
+       CI: true
+     run: node ./dist/cli/cli.js source download --release latest --skipBuild --noBundle --noUsageExample --updateBinariesReleaseMetadataAndSaveGitBundle
+   ```
+   - `--updateBinariesReleaseMetadataAndSaveGitBundle`：更新 `binariesGithubRelease.json` 并保存 git bundle
+
+3. **发布时**：
+   - `binariesGithubRelease.json` 会被提交到仓库
+   - 预构建的二进制文件会被打包到 npm 包中
+
+#### 缓存清理机制
+
+为了避免缓存积累过多占用 GitHub Actions 存储空间，在成功构建后会自动清理旧缓存：
+
+**清理时机**（`build.yml` 第 367-392 行）：
+- 在构建成功后（`steps.build.outcome == 'success'`）
+- 在新缓存自动保存之前
+
+**清理逻辑**：
+```yaml
+- name: Clean old caches
+  if: steps.build.outcome == 'success'
+  continue-on-error: true
+  env:
+    GH_TOKEN: ${{ github.token }}
+  run: |
+    # 删除所有匹配 "prebuilt-binaries-{artifact}-" 前缀的旧缓存
+    CACHE_KEY_PREFIX="prebuilt-binaries-${{ matrix.config.artifact }}-"
+    gh cache list --limit 100 | grep "$CACHE_KEY_PREFIX" | cut -f1 | while read -r cache_id; do
+      gh cache delete "$cache_id"
+    done
+```
+
+**清理范围**：
+- 只清理当前平台（artifact）的缓存
+- 例如：`mac-arm64` 只清理 `prebuilt-binaries-mac-arm64-*` 的缓存
+- 不影响其他平台的缓存
+
+**特点**：
+- ✅ **自动化**：构建成功后自动执行，无需手动干预
+- ✅ **安全性**：使用 `continue-on-error: true`，即使清理失败也不影响构建
+- ✅ **精确性**：只删除当前平台的旧缓存，不误删其他缓存
+- ✅ **节省空间**：每次构建后只保留最新的缓存，避免积累
+
 ### CUDA Version Strategy
 
 在构建流程中，我们为 Linux 和 Windows 各自构建了两个版本的 CUDA 二进制文件：
@@ -91,8 +217,8 @@ src/evaluator/LlamaCompletion.ts
 
 2.  **Fallback Version (CUDA 12.4)**:
     *   构建在 `Ubuntu (2)` 和 `Windows (2)`。
-    *   发布时会被移动到 `fallback` 子目录（例如 `linux-x64-cuda/fallback/libggml-cuda.so`）。
-    *   **目的**: 兼容旧版显卡驱动。如果用户的驱动不支持 CUDA 13，`node-llama-cpp` 会自动尝试加载这个 fallback 版本。
+    *   发布时会被移动到 `fallback` 子目录（例如 `@isdk/linux-x64-cuda-ext` 包中的 `bins/linux-x64-cuda/fallback/libggml-cuda.so`）。
+    *   **目的**: 兼容旧版显卡驱动。如果用户的驱动不支持 CUDA 13，`llama-node` 会自动尝试加载这个 fallback 版本。
     *   这确保了更广泛的硬件兼容性，而无需强制用户升级驱动。
 
 ## Issues
