@@ -1,5 +1,5 @@
 import path from "path";
-import {fileURLToPath} from "url";
+import { fileURLToPath } from "url";
 import process from "process";
 import os from "os";
 import fs from "fs-extra";
@@ -9,21 +9,21 @@ import {
     buildMetadataFileName, documentationPageUrls, llamaCppDirectory, llamaDirectory, llamaLocalBuildBinsDirectory,
     llamaPrebuiltBinsDirectory, llamaToolchainsDirectory
 } from "../../config.js";
-import {BuildGpu, BuildMetadataFile, BuildOptions, convertBuildOptionsToBuildOptionsJSON} from "../types.js";
-import {spawnCommand, SpawnError} from "../../utils/spawnCommand.js";
-import {downloadCmakeIfNeeded, fixXpackPermissions, getCmakePath, hasBuiltinCmake} from "../../utils/cmake.js";
-import {getConsoleLogPrefix} from "../../utils/getConsoleLogPrefix.js";
-import {withLockfile} from "../../utils/withLockfile.js";
-import {getModuleVersion} from "../../utils/getModuleVersion.js";
-import {ensureLlamaCppRepoIsCloned, isLlamaCppRepoCloned} from "./cloneLlamaCppRepo.js";
-import {getBuildFolderNameForBuildOptions} from "./getBuildFolderNameForBuildOptions.js";
-import {setLastBuildInfo} from "./lastBuildInfo.js";
-import {BinaryPlatform, getPlatform} from "./getPlatform.js";
-import {logDistroInstallInstruction} from "./logDistroInstallInstruction.js";
-import {testCmakeBinary} from "./testCmakeBinary.js";
-import {getCudaNvccPaths} from "./detectAvailableComputeLayers.js";
-import {detectWindowsBuildTools} from "./detectBuildTools.js";
-import {asyncSome} from "./asyncSome.js";
+import { BuildGpu, BuildMetadataFile, BuildOptions, convertBuildOptionsToBuildOptionsJSON } from "../types.js";
+import { spawnCommand, SpawnError } from "../../utils/spawnCommand.js";
+import { downloadCmakeIfNeeded, fixXpackPermissions, getCmakePath, hasBuiltinCmake } from "../../utils/cmake.js";
+import { getConsoleLogPrefix } from "../../utils/getConsoleLogPrefix.js";
+import { withLockfile } from "../../utils/withLockfile.js";
+import { getModuleVersion } from "../../utils/getModuleVersion.js";
+import { ensureLlamaCppRepoIsCloned, isLlamaCppRepoCloned } from "./cloneLlamaCppRepo.js";
+import { getBuildFolderNameForBuildOptions } from "./getBuildFolderNameForBuildOptions.js";
+import { setLastBuildInfo } from "./lastBuildInfo.js";
+import { BinaryPlatform, getPlatform } from "./getPlatform.js";
+import { logDistroInstallInstruction } from "./logDistroInstallInstruction.js";
+import { testCmakeBinary } from "./testCmakeBinary.js";
+import { getCudaNvccPaths } from "./detectAvailableComputeLayers.js";
+import { detectWindowsBuildTools } from "./detectBuildTools.js";
+import { asyncSome } from "./asyncSome.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const buildConfigType: "Release" | "RelWithDebInfo" | "Debug" = "Release";
@@ -85,7 +85,7 @@ export async function compileLlamaCpp(buildOptions: BuildOptions, compileOptions
         }, async () => {
             try {
                 if (ensureLlamaCppRepoIsClonedArg)
-                    await ensureLlamaCppRepoIsCloned({progressLogs: buildOptions.progressLogs});
+                    await ensureLlamaCppRepoIsCloned({ progressLogs: buildOptions.progressLogs });
                 else if (!(await isLlamaCppRepoCloned()))
                     throw new Error(`"${llamaCppDirectory}" directory does not exist`);
 
@@ -217,14 +217,14 @@ export async function compileLlamaCpp(buildOptions: BuildOptions, compileOptions
             }
         });
     } catch (err) {
-        if (platform === "linux" && await which("make", {nothrow: true}) == null) {
+        if (platform === "linux" && await which("make", { nothrow: true }) == null) {
             console.info("\n" +
                 getConsoleLogPrefix(true) +
                 chalk.yellow('It seems that "make" is not installed in your system. Install it to resolve build issues')
             );
             await logDistroInstallInstruction('To install "make", ', {
-                linuxPackages: {apt: ["make"], apk: ["make"]},
-                macOsPackages: {brew: ["make"]}
+                linuxPackages: { apt: ["make"], apk: ["make"] },
+                macOsPackages: { brew: ["make"] }
             });
         } else if (platform === "linux" && !(await testCmakeBinary(await getCmakePath()))) {
             console.info("\n" +
@@ -232,11 +232,11 @@ export async function compileLlamaCpp(buildOptions: BuildOptions, compileOptions
                 chalk.yellow('It seems that the used "cmake" doesn\'t work properly. Install it on your system to resolve build issues')
             );
             await logDistroInstallInstruction('To install "cmake", ', {
-                linuxPackages: {apt: ["cmake"], apk: ["cmake"]},
-                macOsPackages: {brew: ["cmake"]}
+                linuxPackages: { apt: ["cmake"], apk: ["cmake"] },
+                macOsPackages: { brew: ["cmake"] }
             });
         } else if (platform === "mac" && (
-            (await which("clang", {nothrow: true})) == null || (
+            (await which("clang", { nothrow: true })) == null || (
                 err instanceof SpawnError &&
                 err.combinedStd.toLowerCase().includes('"/usr/bin/cc" is not able to compile a simple test program')
             )
@@ -250,22 +250,22 @@ export async function compileLlamaCpp(buildOptions: BuildOptions, compileOptions
         else if (buildOptions.gpu === "cuda") {
             if (!ignoreWorkarounds.includes("cudaArchitecture") && (platform === "win" || platform === "linux") &&
                 err instanceof SpawnError && (
-                err.combinedStd.toLowerCase().includes("CUDA Toolkit not found".toLowerCase()) ||
-                err.combinedStd.toLowerCase().includes("Failed to detect a default CUDA architecture".toLowerCase()) ||
-                err.combinedStd.toLowerCase().includes("CMAKE_CUDA_COMPILER-NOTFOUND".toLowerCase()) || (
-                    err.combinedStd.toLowerCase().includes(
-                        "Tell CMake where to find the compiler by setting either the environment".toLowerCase()
-                    ) &&
-                    err.combinedStd.toLowerCase().includes(
-                        'variable "CUDACXX" or the CMake cache entry CMAKE_CUDA_COMPILER to the full'.toLowerCase()
+                    err.combinedStd.toLowerCase().includes("CUDA Toolkit not found".toLowerCase()) ||
+                    err.combinedStd.toLowerCase().includes("Failed to detect a default CUDA architecture".toLowerCase()) ||
+                    err.combinedStd.toLowerCase().includes("CMAKE_CUDA_COMPILER-NOTFOUND".toLowerCase()) || (
+                        err.combinedStd.toLowerCase().includes(
+                            "Tell CMake where to find the compiler by setting either the environment".toLowerCase()
+                        ) &&
+                        err.combinedStd.toLowerCase().includes(
+                            'variable "CUDACXX" or the CMake cache entry CMAKE_CUDA_COMPILER to the full'.toLowerCase()
+                        )
+                    ) || (
+                        err.combinedStd.toLowerCase().includes("The CUDA compiler".toLowerCase()) &&
+                        err.combinedStd.toLowerCase().includes("is not able to compile a simple test program".toLowerCase()) &&
+                        err.combinedStd.toLowerCase().includes("nvcc fatal".toLowerCase())
                     )
-                ) || (
-                    err.combinedStd.toLowerCase().includes("The CUDA compiler".toLowerCase()) &&
-                    err.combinedStd.toLowerCase().includes("is not able to compile a simple test program".toLowerCase()) &&
-                    err.combinedStd.toLowerCase().includes("nvcc fatal".toLowerCase())
-                )
-            )) {
-                for (const {nvccPath, cudaHomePath} of await getCudaNvccPaths()) {
+                )) {
+                for (const { nvccPath, cudaHomePath } of await getCudaNvccPaths()) {
                     if (buildOptions.progressLogs)
                         console.info(
                             getConsoleLogPrefix(true) +
@@ -521,7 +521,7 @@ async function resolvePrebuiltBinaryPath(prebuiltBinaryDirectoryPath: string) {
 }
 
 function getPrebuiltBinariesPackageDirectoryForBuildOptions(buildOptions: BuildOptions) {
-    async function getBinariesPathFromModules(moduleImport: () => Promise<{getBinsDir(): {binsDir: string, packageVersion: string}}>) {
+    async function getBinariesPathFromModules(moduleImport: () => Promise<{ getBinsDir(): { binsDir: string, packageVersion: string } }>) {
         try {
             const [
                 binariesModule,
@@ -530,7 +530,7 @@ function getPrebuiltBinariesPackageDirectoryForBuildOptions(buildOptions: BuildO
                 moduleImport(),
                 getModuleVersion()
             ]);
-            const {binsDir, packageVersion} = binariesModule?.getBinsDir?.() ?? {};
+            const { binsDir, packageVersion } = binariesModule?.getBinsDir?.() ?? {};
 
             if (binsDir == null || packageVersion !== currentModuleVersion)
                 return null;
@@ -542,8 +542,8 @@ function getPrebuiltBinariesPackageDirectoryForBuildOptions(buildOptions: BuildO
     }
 
     async function getBinariesPathFromModulesWithExtModule(
-        moduleImport: () => Promise<{getBinsDir(): {binsDir: string, packageVersion: string}}>,
-        extModuleImport: () => Promise<{getBinsDir(): {binsDir: string, packageVersion: string}}>
+        moduleImport: () => Promise<{ getBinsDir(): { binsDir: string, packageVersion: string } }>,
+        extModuleImport: () => Promise<{ getBinsDir(): { binsDir: string, packageVersion: string } }>
     ) {
         const [
             moduleBinsDir,
@@ -568,49 +568,49 @@ function getPrebuiltBinariesPackageDirectoryForBuildOptions(buildOptions: BuildO
     if (buildOptions.platform === "mac") {
         if (buildOptions.arch === "arm64" && buildOptions.gpu === "metal")
             // @ts-ignore
-            return getBinariesPathFromModules(() => import("@node-llama-cpp/mac-arm64-metal"));
+            return getBinariesPathFromModules(() => import("@isdk/llama-node-mac-arm64-metal"));
         else if (buildOptions.arch === "x64" && buildOptions.gpu === false)
             // @ts-ignore
-            return getBinariesPathFromModules(() => import("@node-llama-cpp/mac-x64"));
+            return getBinariesPathFromModules(() => import("@isdk/llama-node-mac-x64"));
     } else if (buildOptions.platform === "linux") {
         if (buildOptions.arch === "x64") {
             if (buildOptions.gpu === "cuda")
                 return getBinariesPathFromModulesWithExtModule(
                     // @ts-ignore
-                    () => import("@node-llama-cpp/linux-x64-cuda"),
+                    () => import("@isdk/llama-node-linux-x64-cuda"),
                     // @ts-ignore
-                    () => import("@node-llama-cpp/linux-x64-cuda-ext")
+                    () => import("@isdk/llama-node-linux-x64-cuda-ext")
                 );
             else if (buildOptions.gpu === "vulkan")
                 // @ts-ignore
-                return getBinariesPathFromModules(() => import("@node-llama-cpp/linux-x64-vulkan"));
+                return getBinariesPathFromModules(() => import("@isdk/llama-node-linux-x64-vulkan"));
             else if (buildOptions.gpu === false)
                 // @ts-ignore
-                return getBinariesPathFromModules(() => import("@node-llama-cpp/linux-x64"));
+                return getBinariesPathFromModules(() => import("@isdk/llama-node-linux-x64"));
         } else if (buildOptions.arch === "arm64")
             // @ts-ignore
-            return getBinariesPathFromModules(() => import("@node-llama-cpp/linux-arm64"));
+            return getBinariesPathFromModules(() => import("@isdk/llama-node-linux-arm64"));
         else if (buildOptions.arch === "arm")
             // @ts-ignore
-            return getBinariesPathFromModules(() => import("@node-llama-cpp/linux-armv7l"));
+            return getBinariesPathFromModules(() => import("@isdk/llama-node-linux-armv7l"));
     } else if (buildOptions.platform === "win") {
         if (buildOptions.arch === "x64") {
             if (buildOptions.gpu === "cuda")
                 return getBinariesPathFromModulesWithExtModule(
                     // @ts-ignore
-                    () => import("@node-llama-cpp/win-x64-cuda"),
+                    () => import("@isdk/llama-node-win-x64-cuda"),
                     // @ts-ignore
-                    () => import("@node-llama-cpp/win-x64-cuda-ext")
+                    () => import("@isdk/llama-node-win-x64-cuda-ext")
                 );
             else if (buildOptions.gpu === "vulkan")
                 // @ts-ignore
-                return getBinariesPathFromModules(() => import("@node-llama-cpp/win-x64-vulkan"));
+                return getBinariesPathFromModules(() => import("@isdk/llama-node-win-x64-vulkan"));
             else if (buildOptions.gpu === false)
                 // @ts-ignore
-                return getBinariesPathFromModules(() => import("@node-llama-cpp/win-x64"));
+                return getBinariesPathFromModules(() => import("@isdk/llama-node-win-x64"));
         } else if (buildOptions.arch === "arm64")
             // @ts-ignore
-            return getBinariesPathFromModules(() => import("@node-llama-cpp/win-arm64"));
+            return getBinariesPathFromModules(() => import("@isdk/llama-node-win-arm64"));
     }
     /* eslint-enable import/no-unresolved */
 

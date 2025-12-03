@@ -24,8 +24,7 @@ export default tseslint.config({
         "docs-site/",
         "templates/",
         ".vitepress/**",
-        "packages/create-node-llama-cpp/dist/",
-        "packages/@node-llama-cpp/*/dist/",
+        "packages/prebuilt-llama-node/*/dist/",
         ".releaserc.ts",
         ...includeIgnoreFile(gitignorePath).ignores
     ]

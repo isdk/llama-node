@@ -72,7 +72,7 @@ const cudaCmakeOptionsTable = data.cudaCmakeOptionsTable;
 <div v-html="cudaCmakeOptionsTable"></div>
 
 > Source: <a :href="cmakeOptionsFileUrl">`CMakeLists`</a> (filtered for only CUDA-related options)
-> 
+>
 > You can see all the available `llama.cpp` CMake build options [here](../guide/building-from-source.md#customize-build)
 
 :::
@@ -143,15 +143,15 @@ Run this command inside of your project:
 
 ::: code-group
 ```shell [Linux]
-ldd ./node_modules/@node-llama-cpp/linux-x64-cuda/bins/linux-x64-cuda/libggml-cuda.so
+ldd ./node_modules/@isdk/llama-node-linux-x64-cuda/bins/linux-x64-cuda/libggml-cuda.so
 ```
 
 ```cmd [Windows (cmd)]
-"C:\Program Files\Git\usr\bin\ldd.exe" node_modules\@node-llama-cpp\win-x64-cuda\bins\win-x64-cuda\ggml-cuda.dll
+"C:\Program Files\Git\usr\bin\ldd.exe" node_modules\@isdk\llama-node-win-x64-cuda\bins\win-x64-cuda\ggml-cuda.dll
 ```
 
 ```cmd [Windows (PowerShell)]
-& "C:\Program Files\Git\usr\bin\ldd.exe" node_modules\@node-llama-cpp\win-x64-cuda\bins\win-x64-cuda\ggml-cuda.dll
+& "C:\Program Files\Git\usr\bin\ldd.exe" node_modules\@isdk\llama-node-win-x64-cuda\bins\win-x64-cuda\ggml-cuda.dll
 ```
 :::
 
