@@ -112,41 +112,93 @@ src/evaluator/LlamaCompletion.ts
 
 在 `.github/workflows/build.yml` 中，我们使用以下策略来缓存预构建的二进制文件：
 
-**缓存键组成**（第 124-143 行）：
+**缓存键组成**（第 129-163 行）：
 ```yaml
-- name: Get llama.cpp commit hash
-  id: llama-cpp-commit
+- name: Get llama.cpp version for cache
+  id: llama-cpp-version
   shell: bash
   run: |
-    if [ -d "llama/llama.cpp/.git" ]; then
-      COMMIT_HASH=$(cd llama/llama.cpp && git rev-parse HEAD)
-      echo "hash=$COMMIT_HASH" >> $GITHUB_OUTPUT
-      echo "llama.cpp commit: $COMMIT_HASH"
-    else
-      # Fallback: 从 info.json 读取
-      FALLBACK_HASH=$(cat llama/llama.cpp.info.json 2>/dev/null | jq -r '.commit // .tag // "unknown"' || echo "unknown")
-      echo "hash=$FALLBACK_HASH" >> $GITHUB_OUTPUT
+    # Use tag/release name instead of commit hash for cache key
+    # Commit hash changes after squash even if content is identical
+    # Tag is stable and doesn't change
+
+    # First, try to get tag from llama.cpp.info.json
+    VERSION=$(cat llama/llama.cpp.info.json 2>/dev/null | jq -r '.tag // .commit // "unknown"' || echo "unknown")
+
+    if [ "$VERSION" = "unknown" ] && [ -d "llama/llama.cpp/.git" ]; then
+      # Ensure refs directory exists (may be missing from artifacts)
+      mkdir -p llama/llama.cpp/.git/refs/heads llama/llama.cpp/.git/refs/tags llama/llama.cpp/.git/refs/remotes
+
+      # Try to get tag from git
+      VERSION=$(cd llama/llama.cpp && git --git-dir=.git describe --tags --exact-match 2>/dev/null || echo "")
+
+      # If no exact tag, try to get commit hash
+      if [ -z "$VERSION" ]; then
+        VERSION=$(cd llama/llama.cpp && git --git-dir=.git rev-parse HEAD 2>/dev/null || echo "unknown")
+      fi
     fi
 
+    echo "version=$VERSION" >> $GITHUB_OUTPUT
+    echo "llama.cpp version for cache: $VERSION"
+
 - name: Cache prebuilt binaries
+  id: cache-binaries
   uses: actions/cache@v4
   with:
     path: bins
-    key: prebuilt-binaries-${{ matrix.config.artifact }}-${{ steps.llama-cpp-commit.outputs.hash }}-${{ hashFiles('llama/addon/**', 'llama/CMakeLists.txt') }}
+    key: prebuilt-binaries-${{ matrix.config.artifact }}-${{ steps.llama-cpp-version.outputs.version }}-${{ hashFiles('llama/addon/**', 'llama/CMakeLists.txt') }}
 ```
+
+**为什么使用 tag 而不是 commit hash？**
+
+在 CI 构建过程中，llama.cpp 仓库会被 **squash**（压缩）以减小 artifact 大小：
+- 使用 `git commit-tree` 创建一个新的 commit，包含完整的文件树但没有历史记录
+- 添加 `## SQUASHED ##` 标记到 commit message
+- 这会导致 **commit hash 改变**，即使文件内容完全相同
+
+**问题示例**：
+```bash
+# 原始仓库中的 commit（b7263 tag）
+ef75a89fdb39ba33a6896ba314026e1b6826caba
+
+# Squash 后的 commit（同样是 b7263 tag，但 hash 不同）
+52e4fa14a79c6037cb8e8f5e079b4033c8a4f98c
+```
+
+虽然 hash 不同，但它们都指向 **相同的 tag (b7263)**，文件内容完全一致。
+
+**解决方案**：
+- ✅ **使用 tag 作为缓存键**：tag 名称稳定，不会因 squash 而改变
+- ✅ **优先从 `llama.cpp.info.json` 读取**：避免 git 操作的复杂性
+- ✅ **Fallback 到 git tag**：当 info.json 不可用时
+- ✅ **最后使用 commit hash**：仅在无法获取 tag 时（开发分支场景）
 
 **缓存失效条件**：
 缓存只在以下情况下失效：
-1. **llama.cpp 源码实际更新**（commit hash 变化）
+1. **llama.cpp release 版本更新**（tag 变化，如 b7262 → b7263）
 2. **绑定代码变化**（`llama/addon/**` 目录下的文件变化）
 3. **构建配置变化**（`llama/CMakeLists.txt` 文件变化）
 4. **平台不同**（`matrix.config.artifact` 不同）
 
 **优势**：
-- ✅ **精确性**：使用 git commit hash 是最准确的版本标识
-- ✅ **稳定性**：同一个 commit，hash 永远不变
-- ✅ **可靠性**：只要 llama.cpp 源码没变，缓存就能命中
-- ✅ **避免假失效**：不会因为 `llama.cpp.info.json` 的重新生成而导致缓存失效
+- ✅ **稳定性**：同一个 release tag，缓存键永远不变
+- ✅ **Squash 兼容**：不受 commit hash 变化影响
+- ✅ **可靠性**：只要 llama.cpp 版本相同，缓存就能命中
+- ✅ **简洁性**：tag 名称（如 `b7263`）比 commit hash 更易读
+
+**Artifacts 中 `.git` 目录的问题**：
+- GitHub Actions 的 `upload-artifact@v4` 会**丢失 `.git/refs/` 目录**（即使设置了 `include-hidden-files: true`）
+- 导致 git 命令无法正常工作，会回退到父仓库
+- **解决方法**：在获取版本号前创建缺失的目录：
+  ```bash
+  mkdir -p llama/llama.cpp/.git/refs/heads llama/llama.cpp/.git/refs/tags llama/llama.cpp/.git/refs/remotes
+  ```
+- 同时使用 `--git-dir=.git` 明确指定 git 目录，避免回退到父仓库
+
+**`source download --release latest` 的语义**：
+- `latest` 指的是 **GitHub Release 的最新 tag**（如 b7263），而不是最新的 commit
+- 使用 `octokit.rest.repos.getLatestRelease` API 获取
+- 返回的是 release 的 `tag_name`，保证了版本的稳定性
 
 #### 版本更新流程
 
