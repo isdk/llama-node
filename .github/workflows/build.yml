@@ -17,6 +17,11 @@ on:
         required: false
         default: false
         type: boolean
+      skip_tests:
+        description: '跳过测试'
+        required: false
+        default: false
+        type: boolean
       force_rebuild_binaries:
         description: '强制重新构建二进制（即使有缓存）'
         required: false
@@ -464,6 +469,8 @@ jobs:
 
   standalone-tests:
     name: Standalone tests
+    if: |
+      github.event_name != 'workflow_dispatch' || !inputs.skip_tests
     runs-on: ubuntu-22.04
     needs:
       - build
@@ -506,6 +513,8 @@ jobs:
 
   model-dependent-tests:
     name: Model dependent tests
+    if: |
+      github.event_name != 'workflow_dispatch' || !inputs.skip_tests
     runs-on: macos-13
     env:
       NODE_LLAMA_CPP_GPU: false
