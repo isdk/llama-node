@@ -11,10 +11,13 @@ async function moveBinariesFolderToStandaloneModule(folderNameFilter: (folderNam
         if (!folderNameFilter(folderName))
             continue;
 
-        const packagePath = path.join(packageDirectory, "prebuilt-llama-node", packageName);
+        // Extract directory name from scoped package name
+        // e.g., "@isdk/llama-node-linux-x64" -> "linux-x64"
+        const dirName = packageName.replace(/^@[^/]+\/llama-node-/, "");
+        const packagePath = path.join(packageDirectory, "prebuilt-llama-node", dirName);
         const packageBinsPath = path.join(packagePath, "bins");
 
-        console.info(`Moving "${folderName}" to "${packageName}"`);
+        console.info(`Moving "${folderName}" to "${packageName}" (${dirName})`);
 
         await fs.ensureDir(packageBinsPath);
         await fs.move(path.join(binsDirectory, folderName), path.join(packageBinsPath, folderName));
@@ -32,7 +35,10 @@ async function moveBinariesFallbackDirToStandaloneExtModule(folderNameFilter: (f
         if (!folderNameFilter(folderName))
             continue;
 
-        const packagePath = path.join(packageDirectory, "prebuilt-llama-node", packageName);
+        // Extract directory name from scoped package name
+        // e.g., "@isdk/llama-node-linux-x64-cuda-ext" -> "linux-x64-cuda-ext"
+        const dirName = packageName.replace(/^@[^/]+\/llama-node-/, "");
+        const packagePath = path.join(packageDirectory, "prebuilt-llama-node", dirName);
         const packageBinsPath = path.join(packagePath, "bins");
         const fallbackDir = path.join(binsDirectory, folderName, "fallback");
 
@@ -41,7 +47,7 @@ async function moveBinariesFallbackDirToStandaloneExtModule(folderNameFilter: (f
             continue;
         }
 
-        console.info(`Moving "${folderName}/fallback" to "${packageName}"`);
+        console.info(`Moving "${folderName}/fallback" to "${packageName}" (${dirName})`);
 
         await fs.ensureDir(path.join(packageBinsPath, folderName));
         await fs.move(fallbackDir, path.join(packageBinsPath, folderName, "fallback"));
