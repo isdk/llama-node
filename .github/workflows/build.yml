@@ -436,6 +436,8 @@ jobs:
       next-version: ${{ steps.save-next-version.outputs.next-version }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: pnpm/action-setup@v4
         with:
           version: 10
@@ -609,6 +611,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          fetch-depth: 0
+          persist-credentials: true
           lfs: true
       - uses: pnpm/action-setup@v4
         with:
