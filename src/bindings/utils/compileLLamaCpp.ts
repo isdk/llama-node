@@ -566,51 +566,69 @@ function getPrebuiltBinariesPackageDirectoryForBuildOptions(buildOptions: BuildO
 
     /* eslint-disable import/no-unresolved */
     if (buildOptions.platform === "mac") {
-        if (buildOptions.arch === "arm64" && buildOptions.gpu === "metal")
+        if (buildOptions.arch === "arm64" && buildOptions.gpu === "metal") {
+            const pkg = "@isdk/llama-node-mac-arm64-metal";
             // @ts-ignore
-            return getBinariesPathFromModules(() => import("@isdk/llama-node-mac-arm64-metal"));
-        else if (buildOptions.arch === "x64" && buildOptions.gpu === false)
+            return getBinariesPathFromModules(() => import(pkg));
+        } else if (buildOptions.arch === "x64" && buildOptions.gpu === false) {
+            const pkg = "@isdk/llama-node-mac-x64";
             // @ts-ignore
-            return getBinariesPathFromModules(() => import("@isdk/llama-node-mac-x64"));
+            return getBinariesPathFromModules(() => import(pkg));
+        }
     } else if (buildOptions.platform === "linux") {
         if (buildOptions.arch === "x64") {
-            if (buildOptions.gpu === "cuda")
+            if (buildOptions.gpu === "cuda") {
+                const pkg = "@isdk/llama-node-linux-x64-cuda";
+                const extPkg = "@isdk/llama-node-linux-x64-cuda-ext";
                 return getBinariesPathFromModulesWithExtModule(
                     // @ts-ignore
-                    () => import("@isdk/llama-node-linux-x64-cuda"),
+                    () => import(pkg),
                     // @ts-ignore
-                    () => import("@isdk/llama-node-linux-x64-cuda-ext")
+                    () => import(extPkg)
                 );
-            else if (buildOptions.gpu === "vulkan")
+            } else if (buildOptions.gpu === "vulkan") {
+                const pkg = "@isdk/llama-node-linux-x64-vulkan";
                 // @ts-ignore
-                return getBinariesPathFromModules(() => import("@isdk/llama-node-linux-x64-vulkan"));
-            else if (buildOptions.gpu === false)
+                return getBinariesPathFromModules(() => import(pkg));
+            } else if (buildOptions.gpu === false) {
+                const pkg = "@isdk/llama-node-linux-x64";
                 // @ts-ignore
-                return getBinariesPathFromModules(() => import("@isdk/llama-node-linux-x64"));
-        } else if (buildOptions.arch === "arm64")
+                return getBinariesPathFromModules(() => import(pkg));
+            }
+        } else if (buildOptions.arch === "arm64") {
+            const pkg = "@isdk/llama-node-linux-arm64";
             // @ts-ignore
-            return getBinariesPathFromModules(() => import("@isdk/llama-node-linux-arm64"));
-        else if (buildOptions.arch === "arm")
+            return getBinariesPathFromModules(() => import(pkg));
+        } else if (buildOptions.arch === "arm") {
+            const pkg = "@isdk/llama-node-linux-armv7l";
             // @ts-ignore
-            return getBinariesPathFromModules(() => import("@isdk/llama-node-linux-armv7l"));
+            return getBinariesPathFromModules(() => import(pkg));
+        }
     } else if (buildOptions.platform === "win") {
         if (buildOptions.arch === "x64") {
-            if (buildOptions.gpu === "cuda")
+            if (buildOptions.gpu === "cuda") {
+                const pkg = "@isdk/llama-node-win-x64-cuda";
+                const extPkg = "@isdk/llama-node-win-x64-cuda-ext";
                 return getBinariesPathFromModulesWithExtModule(
                     // @ts-ignore
-                    () => import("@isdk/llama-node-win-x64-cuda"),
+                    () => import(pkg),
                     // @ts-ignore
-                    () => import("@isdk/llama-node-win-x64-cuda-ext")
+                    () => import(extPkg)
                 );
-            else if (buildOptions.gpu === "vulkan")
+            } else if (buildOptions.gpu === "vulkan") {
+                const pkg = "@isdk/llama-node-win-x64-vulkan";
                 // @ts-ignore
-                return getBinariesPathFromModules(() => import("@isdk/llama-node-win-x64-vulkan"));
-            else if (buildOptions.gpu === false)
+                return getBinariesPathFromModules(() => import(pkg));
+            } else if (buildOptions.gpu === false) {
+                const pkg = "@isdk/llama-node-win-x64";
                 // @ts-ignore
-                return getBinariesPathFromModules(() => import("@isdk/llama-node-win-x64"));
-        } else if (buildOptions.arch === "arm64")
+                return getBinariesPathFromModules(() => import(pkg));
+            }
+        } else if (buildOptions.arch === "arm64") {
+            const pkg = "@isdk/llama-node-win-arm64";
             // @ts-ignore
-            return getBinariesPathFromModules(() => import("@isdk/llama-node-win-arm64"));
+            return getBinariesPathFromModules(() => import(pkg));
+        }
     }
     /* eslint-enable import/no-unresolved */
 
