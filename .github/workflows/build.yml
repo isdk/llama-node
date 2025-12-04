@@ -130,10 +130,23 @@ jobs:
         id: llama-cpp-commit
         shell: bash
         run: |
+          # Try to get commit hash from git repository
           if [ -d "llama/llama.cpp/.git" ]; then
-            COMMIT_HASH=$(cd llama/llama.cpp && git rev-parse HEAD)
-            echo "hash=$COMMIT_HASH" >> $GITHUB_OUTPUT
-            echo "llama.cpp commit: $COMMIT_HASH"
+            # Ensure refs directory exists (may be missing from artifacts)
+            mkdir -p llama/llama.cpp/.git/refs/heads llama/llama.cpp/.git/refs/tags llama/llama.cpp/.git/refs/remotes
+
+            # Use --git-dir to avoid picking up parent repository
+            COMMIT_HASH=$(cd llama/llama.cpp && git --git-dir=.git rev-parse HEAD 2>/dev/null || echo "")
+
+            if [ -n "$COMMIT_HASH" ]; then
+              echo "hash=$COMMIT_HASH" >> $GITHUB_OUTPUT
+              echo "llama.cpp commit: $COMMIT_HASH"
+            else
+              echo "Warning: git directory exists but is invalid, using fallback"
+              FALLBACK_HASH=$(cat llama/llama.cpp.info.json 2>/dev/null | jq -r '.commit // .tag // "unknown"' || echo "unknown")
+              echo "hash=$FALLBACK_HASH" >> $GITHUB_OUTPUT
+              echo "llama.cpp version: $FALLBACK_HASH"
+            fi
           else
             echo "Warning: llama.cpp git directory not found, using fallback"
             FALLBACK_HASH=$(cat llama/llama.cpp.info.json 2>/dev/null | jq -r '.commit // .tag // "unknown"' || echo "unknown")
