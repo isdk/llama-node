@@ -11,7 +11,7 @@ import "./packTemplates.js";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const electronTemplateName = "electron-typescript-react";
-const projectName = "node-llama-cpp-electron-example";
+const projectName = "llama-node-electron-example";
 
 const argv = await yargs(hideBin(process.argv))
     .option("packageVersion", {
@@ -28,7 +28,7 @@ const { packageVersion, packageFolderPath } = argv;
 if (packageVersion === "")
     throw new Error("packageVersion is empty");
 
-console.info("node-llama-cpp version:", packageVersion);
+console.info("@isdk/llama-node version:", packageVersion);
 
 const resolvedPackageFolderPath = path.resolve(process.cwd(), packageFolderPath);
 
