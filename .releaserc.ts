@@ -84,7 +84,10 @@ const config: Omit<GlobalConfig, "repositoryUrl" | "tagFormat"> = {
         ["@semantic-release/exec", {
             publishCmd: "npx --no vite-node ./scripts/publishStandalonePrebuiltBinaryModules.ts --packageVersion \"${nextRelease.version}\""
         }],
-        "@semantic-release/npm",
+        ["@semantic-release/npm", {
+            npmPublish: true,
+            access: "public"
+        }],
         ["@semantic-release/github", githubPluginConfig],
         ["@semantic-release/exec", {
             publishCmd: "echo \"${nextRelease.version}\" > .semanticRelease.npmPackage.deployedVersion.txt"
