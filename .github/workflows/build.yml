@@ -126,33 +126,32 @@ jobs:
           name: llama.cpp
           path: llama
 
-      - name: Get llama.cpp commit hash
-        id: llama-cpp-commit
+      - name: Get llama.cpp version for cache
+        id: llama-cpp-version
         shell: bash
         run: |
-          # Try to get commit hash from git repository
-          if [ -d "llama/llama.cpp/.git" ]; then
+          # Use tag/release name instead of commit hash for cache key
+          # Commit hash changes after squash even if content is identical
+          # Tag is stable and doesn't change
+
+          # First, try to get tag from llama.cpp.info.json
+          VERSION=$(cat llama/llama.cpp.info.json 2>/dev/null | jq -r '.tag // .commit // "unknown"' || echo "unknown")
+
+          if [ "$VERSION" = "unknown" ] && [ -d "llama/llama.cpp/.git" ]; then
             # Ensure refs directory exists (may be missing from artifacts)
             mkdir -p llama/llama.cpp/.git/refs/heads llama/llama.cpp/.git/refs/tags llama/llama.cpp/.git/refs/remotes
 
-            # Use --git-dir to avoid picking up parent repository
-            COMMIT_HASH=$(cd llama/llama.cpp && git --git-dir=.git rev-parse HEAD 2>/dev/null || echo "")
+            # Try to get tag from git
+            VERSION=$(cd llama/llama.cpp && git --git-dir=.git describe --tags --exact-match 2>/dev/null || echo "")
 
-            if [ -n "$COMMIT_HASH" ]; then
-              echo "hash=$COMMIT_HASH" >> $GITHUB_OUTPUT
-              echo "llama.cpp commit: $COMMIT_HASH"
-            else
-              echo "Warning: git directory exists but is invalid, using fallback"
-              FALLBACK_HASH=$(cat llama/llama.cpp.info.json 2>/dev/null | jq -r '.commit // .tag // "unknown"' || echo "unknown")
-              echo "hash=$FALLBACK_HASH" >> $GITHUB_OUTPUT
-              echo "llama.cpp version: $FALLBACK_HASH"
+            # If no exact tag, try to get commit hash
+            if [ -z "$VERSION" ]; then
+              VERSION=$(cd llama/llama.cpp && git --git-dir=.git rev-parse HEAD 2>/dev/null || echo "unknown")
             fi
-          else
-            echo "Warning: llama.cpp git directory not found, using fallback"
-            FALLBACK_HASH=$(cat llama/llama.cpp.info.json 2>/dev/null | jq -r '.commit // .tag // "unknown"' || echo "unknown")
-            echo "hash=$FALLBACK_HASH" >> $GITHUB_OUTPUT
-            echo "llama.cpp version: $FALLBACK_HASH"
           fi
+
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "llama.cpp version for cache: $VERSION"
 
       - name: Cache prebuilt binaries
         id: cache-binaries
@@ -160,7 +159,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: bins
-          key: prebuilt-binaries-${{ matrix.config.artifact }}-${{ steps.llama-cpp-commit.outputs.hash }}-${{ hashFiles('llama/addon/**', 'llama/CMakeLists.txt') }}
+          key: prebuilt-binaries-${{ matrix.config.artifact }}-${{ steps.llama-cpp-version.outputs.version }}-${{ hashFiles('llama/addon/**', 'llama/CMakeLists.txt') }}
 
       - name: Install dependencies on Windows
         if: startsWith(matrix.config.os, 'windows') && steps.cache-binaries.outputs.cache-hit != 'true'
