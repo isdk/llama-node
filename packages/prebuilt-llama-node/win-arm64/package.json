@@ -1,7 +1,7 @@
 {
   "name": "@isdk/llama-node-win-arm64",
   "version": "0.1.0",
-  "description": "Prebuilt binary for node-llama-cpp for Windows arm64",
+  "description": "Prebuilt binary for @isdk/llama-node for Windows arm64",
   "main": "dist/index.js",
   "type": "module",
   "files": [
@@ -45,7 +45,7 @@
   "bugs": {
     "url": "https://github.com/isdk/llama-node/issues"
   },
-  "homepage": "https://node-llama-cpp.withcat.ai",
+  "homepage": "https://github.com/isdk/llama-node",
   "devDependencies": {
     "typescript": "^5.2.2"
   }
