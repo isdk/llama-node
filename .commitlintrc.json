@@ -1,6 +1,16 @@
 {
-    "extends": ["@commitlint/config-conventional"],
+    "extends": [
+        "@commitlint/config-conventional"
+    ],
     "rules": {
-        "subject-case": [0, "never"]
+        "subject-case": [
+            0,
+            "never"
+        ],
+        "header-max-length": [
+            0,
+            "always",
+            200
+        ]
     }
 }
