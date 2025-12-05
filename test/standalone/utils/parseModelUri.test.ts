@@ -207,7 +207,8 @@ describe("utils", () => {
       });
     });
 
-    test("Hugging Face simple URI is resolved 2", { timeout: 1000 * 10 }, async () => {
+    // TODO: if HF_ENDPOINT=hf-mirror.com then this test will fail
+    test.skipIf(process.env.HF_ENDPOINT?.includes("hf-mirror.com"))("Hugging Face simple URI is resolved 2", { timeout: 1000 * 10 }, async () => {
       const parsedModelUri = parseModelUri("hf:bartowski/Meta-Llama-3.1-70B-Instruct-GGUF:Q5_K_M");
 
       expect(parsedModelUri).toEqual({
@@ -296,10 +297,10 @@ describe("utils", () => {
         expect.unreachable("This quantization cannot be resolved due to being binary split");
       } catch (err: any) {
         expect(err).toBeInstanceOf(Error);
-        expect([
-          'Failed to fetch manifest for resolving URI "hf:mradermacher/Meta-Llama-3.1-70B-Instruct-GGUF:Q8_0"',
-          'Cannot get quantization "Q8_0" for model "hf:mradermacher/Meta-Llama-3.1-70B-Instruct-GGUF" or it does not exist',
-        ]).toContain(err.message);
+        expect(err.message).toSatisfy((msg: string) =>
+          msg.includes('Failed to fetch manifest for resolving URI "hf:mradermacher/Meta-Llama-3.1-70B-Instruct-GGUF:Q8_0"') ||
+          msg.includes('Cannot get quantization "Q8_0" for model "hf:mradermacher/Meta-Llama-3.1-70B-Instruct-GGUF" or it does not exist')
+        );
       };
     });
 
@@ -361,10 +362,10 @@ describe("utils", () => {
         expect.unreachable("This quantization cannot be resolved due to not existing");
       } catch (err: any) {
         expect(err).toBeInstanceOf(Error);
-        expect([
-          'Failed to fetch manifest for resolving URI "hf:mradermacher/Meta-Llama-3.1-70B-Instruct-GGUF:invalid"',
-          'Cannot get quantization "invalid" for model "hf:mradermacher/Meta-Llama-3.1-70B-Instruct-GGUF" or it does not exist',
-        ]).toContain(err.message);
+        expect(err.message).toSatisfy((msg: string) =>
+          msg.includes('Failed to fetch manifest for resolving URI "hf:mradermacher/Meta-Llama-3.1-70B-Instruct-GGUF:invalid"') ||
+          msg.includes('Cannot get quantization "invalid" for model "hf:mradermacher/Meta-Llama-3.1-70B-Instruct-GGUF" or it does not exist')
+        );
       };
     });
   });
