@@ -57,7 +57,10 @@ const config: Omit<GlobalConfig, "repositoryUrl" | "tagFormat"> = {
             preset: "angular",
             releaseRules: [
                 { type: "feat", scope: "minor", release: "patch" },
-                { type: "docs", scope: "README", release: "patch" }
+                { type: "docs", scope: "README", release: "patch" },
+                { type: "docs", breaking: true, release: "minor" },
+                { scope: "ci", release: false },
+                { scope: "build", release: "patch" },
             ]
         }],
         ["@semantic-release/release-notes-generator", {
