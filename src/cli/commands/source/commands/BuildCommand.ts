@@ -1,28 +1,29 @@
 import process from "process";
-import {CommandModule} from "yargs";
+import { CommandModule } from "yargs";
 import chalk from "chalk";
-import {compileLlamaCpp} from "../../../../bindings/utils/compileLLamaCpp.js";
+import { compileLlamaCpp } from "../../../../bindings/utils/compileLLamaCpp.js";
 import withOra from "../../../../utils/withOra.js";
-import {clearTempFolder} from "../../../../utils/clearTempFolder.js";
-import {builtinLlamaCppGitHubRepo, builtinLlamaCppRelease, isCI, defaultLlamaCppGpuSupport, documentationPageUrls} from "../../../../config.js";
-import {downloadCmakeIfNeeded} from "../../../../utils/cmake.js";
+import { clearTempFolder } from "../../../../utils/clearTempFolder.js";
+import { builtinLlamaCppGitHubRepo, builtinLlamaCppRelease, isCI, defaultLlamaCppGpuSupport, documentationPageUrls } from "../../../../config.js";
+import { downloadCmakeIfNeeded } from "../../../../utils/cmake.js";
 import withStatusLogs from "../../../../utils/withStatusLogs.js";
-import {logBinaryUsageExampleToConsole} from "../../../../bindings/utils/logBinaryUsageExampleToConsole.js";
-import {getPlatform} from "../../../../bindings/utils/getPlatform.js";
-import {resolveCustomCmakeOptions} from "../../../../bindings/utils/resolveCustomCmakeOptions.js";
-import {getClonedLlamaCppRepoReleaseInfo, isLlamaCppRepoCloned} from "../../../../bindings/utils/cloneLlamaCppRepo.js";
-import {BuildGpu, BuildOptions, nodeLlamaCppGpuOptions, parseNodeLlamaCppGpuOption} from "../../../../bindings/types.js";
-import {logUsedGpuTypeOption} from "../../../utils/logUsedGpuTypeOption.js";
-import {getGpuTypesToUseForOption} from "../../../../bindings/utils/getGpuTypesToUseForOption.js";
-import {getConsoleLogPrefix} from "../../../../utils/getConsoleLogPrefix.js";
-import {getPrettyBuildGpuName} from "../../../../bindings/consts.js";
-import {getPlatformInfo} from "../../../../bindings/utils/getPlatformInfo.js";
-import {withCliCommandDescriptionDocsUrl} from "../../../utils/withCliCommandDescriptionDocsUrl.js";
+import { logBinaryUsageExampleToConsole } from "../../../../bindings/utils/logBinaryUsageExampleToConsole.js";
+import { getPlatform } from "../../../../bindings/utils/getPlatform.js";
+import { resolveCustomCmakeOptions } from "../../../../bindings/utils/resolveCustomCmakeOptions.js";
+import { getClonedLlamaCppRepoReleaseInfo, isLlamaCppRepoCloned } from "../../../../bindings/utils/cloneLlamaCppRepo.js";
+import { BuildGpu, BuildOptions, nodeLlamaCppGpuOptions, parseNodeLlamaCppGpuOption } from "../../../../bindings/types.js";
+import { logUsedGpuTypeOption } from "../../../utils/logUsedGpuTypeOption.js";
+import { getGpuTypesToUseForOption } from "../../../../bindings/utils/getGpuTypesToUseForOption.js";
+import { getConsoleLogPrefix } from "../../../../utils/getConsoleLogPrefix.js";
+import { getPrettyBuildGpuName } from "../../../../bindings/consts.js";
+import { getPlatformInfo } from "../../../../bindings/utils/getPlatformInfo.js";
+import { withCliCommandDescriptionDocsUrl } from "../../../utils/withCliCommandDescriptionDocsUrl.js";
 
 type BuildCommand = {
     arch?: typeof process.arch,
     nodeTarget?: string,
     gpu?: BuildGpu | "auto",
+    compiler?: "clang" | "gcc" | "msvc" | "auto",
     noUsageExample?: boolean,
 
     /** @internal */
@@ -61,6 +62,13 @@ export const BuildCommand: CommandModule<object, BuildCommand> = {
                 coerce: parseNodeLlamaCppGpuOption,
                 description: "Compute layer implementation type to use for llama.cpp"
             })
+            .option("compiler", {
+                type: "string",
+                choices: ["clang", "gcc", "msvc", "auto"],
+                default: "clang",
+                description: "Compiler to use",
+                coerce: (value) => value as "clang" | "gcc" | "msvc" | "auto"
+            })
             .option("noUsageExample", {
                 alias: "nu",
                 type: "boolean",
@@ -87,6 +95,7 @@ export async function BuildLlamaCppCommand({
     arch = undefined,
     nodeTarget = undefined,
     gpu = defaultLlamaCppGpuSupport,
+    compiler = "clang",
     noUsageExample = false,
 
     /** @internal */
@@ -107,7 +116,25 @@ export async function BuildLlamaCppCommand({
     const platform = getPlatform();
     const platformInfo = await getPlatformInfo();
     const customCmakeOptions = resolveCustomCmakeOptions();
-    const buildGpusToTry: BuildGpu[] = await getGpuTypesToUseForOption(gpu, {platform, arch});
+
+    if (compiler === "clang") {
+        if (!customCmakeOptions.has("CMAKE_C_COMPILER"))
+            customCmakeOptions.set("CMAKE_C_COMPILER", "clang");
+        if (!customCmakeOptions.has("CMAKE_CXX_COMPILER"))
+            customCmakeOptions.set("CMAKE_CXX_COMPILER", "clang++");
+    } else if (compiler === "gcc") {
+        if (!customCmakeOptions.has("CMAKE_C_COMPILER"))
+            customCmakeOptions.set("CMAKE_C_COMPILER", "gcc");
+        if (!customCmakeOptions.has("CMAKE_CXX_COMPILER"))
+            customCmakeOptions.set("CMAKE_CXX_COMPILER", "g++");
+    } else if (compiler === "msvc") {
+        if (!customCmakeOptions.has("CMAKE_C_COMPILER"))
+            customCmakeOptions.set("CMAKE_C_COMPILER", "cl");
+        if (!customCmakeOptions.has("CMAKE_CXX_COMPILER"))
+            customCmakeOptions.set("CMAKE_CXX_COMPILER", "cl");
+    }
+
+    const buildGpusToTry: BuildGpu[] = await getGpuTypesToUseForOption(gpu, { platform, arch });
     let downloadedCmake = false;
 
     for (let i = 0; i < buildGpusToTry.length; i++) {

@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.19)
 
+
 if (NLC_CURRENT_PLATFORM STREQUAL "win-x64" OR NLC_CURRENT_PLATFORM STREQUAL "win-arm64")
     set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 endif()
