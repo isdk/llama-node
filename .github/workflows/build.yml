@@ -173,13 +173,14 @@ jobs:
           choco install cmake.install --version=3.31.1
           choco install cmake --version=3.31.1
           choco install ninja
+          choco install llvm
 
       - name: Install dependencies on Ubuntu (1)
         if: matrix.config.name == 'Ubuntu (1)' && steps.cache-binaries.outputs.cache-hit != 'true'
         run: |
           sudo bash .github/scripts/setup-apt-mirror.sh || true
           sudo apt-get update
-          sudo apt-get install ninja-build libtbb-dev g++-aarch64-linux-gnu gcc-aarch64-linux-gnu g++-arm-linux-gnueabihf gcc-arm-linux-gnueabihf
+          sudo apt-get install ninja-build libtbb-dev g++-aarch64-linux-gnu gcc-aarch64-linux-gnu g++-arm-linux-gnueabihf gcc-arm-linux-gnueabihf clang libomp-dev
 
           wget -c https://github.com/Kitware/CMake/releases/download/v3.31.7/cmake-3.31.7-linux-x86_64.tar.gz
           sudo tar --strip-components=1 -C /usr/local -xzf cmake-3.31.7-linux-x86_64.tar.gz
@@ -198,7 +199,7 @@ jobs:
         run: |
           sudo bash .github/scripts/setup-apt-mirror.sh || true
           sudo apt-get update
-          sudo apt-get install ninja-build libtbb-dev
+          sudo apt-get install ninja-build libtbb-dev clang libomp-dev
 
           wget -c https://github.com/Kitware/CMake/releases/download/v3.31.7/cmake-3.31.7-linux-x86_64.tar.gz
           sudo tar --strip-components=1 -C /usr/local -xzf cmake-3.31.7-linux-x86_64.tar.gz

@@ -59,13 +59,18 @@ export async function compileLlamaCpp(buildOptions: BuildOptions, compileOptions
         : buildFolderName.withoutCustomCmakeOptions;
     const useWindowsLlvm = (
         platform === "win" &&
-        (
-            buildOptions.gpu === false ||
-            buildOptions.gpu === "vulkan"
-        ) &&
         !ignoreWorkarounds.includes("avoidWindowsLlvm") &&
         !buildOptions.customCmakeOptions.has("CMAKE_TOOLCHAIN_FILE") &&
-        !requiresMsvcOnWindowsFlags.some((flag) => buildOptions.customCmakeOptions.has(flag))
+        (
+            !buildOptions.customCmakeOptions.has("CMAKE_C_COMPILER") ||
+            buildOptions.customCmakeOptions.get("CMAKE_C_COMPILER") === "clang" ||
+            buildOptions.customCmakeOptions.get("CMAKE_C_COMPILER") === "clang-cl"
+        ) &&
+        (
+            !buildOptions.customCmakeOptions.has("CMAKE_CXX_COMPILER") ||
+            buildOptions.customCmakeOptions.get("CMAKE_CXX_COMPILER") === "clang++" ||
+            buildOptions.customCmakeOptions.get("CMAKE_CXX_COMPILER") === "clang-cl"
+        )
     )
         ? areWindowsBuildToolsCapableForLlvmBuild(await detectWindowsBuildTools())
         : false;
@@ -139,11 +144,39 @@ export async function compileLlamaCpp(buildOptions: BuildOptions, compileOptions
                         cmakeCustomOptions.set("LLAMA_OPENSSL", "OFF");
                 }
 
-                if (buildOptions.platform === "win" && buildOptions.arch === "arm64" && !cmakeCustomOptions.has("GGML_OPENMP"))
-                    cmakeCustomOptions.set("GGML_OPENMP", "OFF");
+                if (platform === "linux" && buildOptions.customCmakeOptions.get("CMAKE_C_COMPILER") === "clang") {
+                    const openMpLibPath = await getLinuxOpenMpLibPath();
+                    if (openMpLibPath != null) {
+                        if (buildOptions.progressLogs)
+                            console.info(getConsoleLogPrefix(true) + `Found OpenMP library at "${openMpLibPath}"`);
 
-                if (useWindowsLlvm)
-                    cmakeCustomOptions.set("GGML_OPENMP", "OFF");
+                        // This is needed for FindOpenMP to find the library
+                        cmakeCustomOptions.set("CMAKE_LIBRARY_PATH", openMpLibPath);
+
+                        // This is needed for the linker to find the library
+                        if (!cmakeCustomOptions.has("CMAKE_EXE_LINKER_FLAGS"))
+                            cmakeCustomOptions.set("CMAKE_EXE_LINKER_FLAGS", `-L${openMpLibPath}`);
+                        else
+                            cmakeCustomOptions.set("CMAKE_EXE_LINKER_FLAGS", cmakeCustomOptions.get("CMAKE_EXE_LINKER_FLAGS") + ` -L${openMpLibPath}`);
+
+                        if (!cmakeCustomOptions.has("CMAKE_SHARED_LINKER_FLAGS"))
+                            cmakeCustomOptions.set("CMAKE_SHARED_LINKER_FLAGS", `-L${openMpLibPath}`);
+                        else
+                            cmakeCustomOptions.set("CMAKE_SHARED_LINKER_FLAGS", cmakeCustomOptions.get("CMAKE_SHARED_LINKER_FLAGS") + ` -L${openMpLibPath}`);
+                    } else {
+                        console.warn(
+                            getConsoleLogPrefix(true) +
+                            chalk.yellow("OpenMP library not found. Performance may be degraded. ") +
+                            "To enable OpenMP support, install `libomp-dev` (or `libomp-<version>-dev` matching your Clang version) on your system."
+                        );
+                        await logDistroInstallInstruction("To install OpenMP, ", {
+                            linuxPackages: { apt: ["libomp-dev"], apk: ["libomp-dev"] },
+                            macOsPackages: { brew: ["libomp"] }
+                        });
+                    }
+                }
+
+
 
                 if (ciMode) {
                     if (!cmakeCustomOptions.has("GGML_OPENMP"))
@@ -704,4 +737,46 @@ function isCmakeValueOff(value?: string) {
 
 function areWindowsBuildToolsCapableForLlvmBuild(detectedBuildTools: Awaited<ReturnType<typeof detectWindowsBuildTools>>) {
     return detectedBuildTools.hasLlvm && detectedBuildTools.hasNinja && detectedBuildTools.hasLibExe;
+}
+
+async function getLinuxOpenMpLibPath() {
+    try {
+        const searchPaths = [
+            "/usr/lib",
+            "/usr/lib64",
+            "/usr/local/lib",
+            "/lib",
+            "/lib64"
+        ];
+
+        for (const searchPath of searchPaths) {
+            if (!(await fs.pathExists(searchPath)))
+                continue;
+
+            // Check directly in the path
+            if (await fs.pathExists(path.join(searchPath, "libomp.so")))
+                return searchPath;
+
+            // Check in llvm-* subdirectories
+            const subdirs = await fs.readdir(searchPath);
+            const llvmDirs = subdirs.filter((d) => d.startsWith("llvm-"));
+
+            // Sort llvm dirs to prefer higher versions
+            llvmDirs.sort((a, b) => {
+                const verA = parseInt(a.slice("llvm-".length)) || 0;
+                const verB = parseInt(b.slice("llvm-".length)) || 0;
+                return verB - verA;
+            });
+
+            for (const dir of llvmDirs) {
+                const libPath = path.join(searchPath, dir, "lib");
+                if (await fs.pathExists(path.join(libPath, "libomp.so")))
+                    return libPath;
+            }
+        }
+    } catch (err) {
+        // ignore
+    }
+
+    return null;
 }
