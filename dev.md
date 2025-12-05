@@ -634,3 +634,43 @@ interface AIResult {
 }
 const response: AIResult|ReadableStream<AIResult> = model.chatCompletion(prompt: string|tokens[], {stream: true, max_tokens: 1024, temperature: 0.2, signal: ...})
 ```
+
+## 本地编译 Prebuilt 二进制包
+
+为了支持离线编译和利用本地机器性能，我们提供了本地编译脚本。
+
+### 1. 准备环境
+
+检查并安装必要的构建工具（CMake, Ninja, Clang, OpenMP）：
+
+```bash
+# 检查工具状态
+pnpm run local:setup
+
+# 自动安装缺失工具 (支持 Windows/Linux/macOS)
+pnpm run local:setup:install
+```
+
+### 2. 编译二进制文件
+
+编译脚本会自动根据当前操作系统生成构建矩阵（例如在 Linux x64 上会自动编译 CPU、Vulkan 和 CUDA 版本）。
+
+```bash
+# 编译当前平台的所有变体 (默认使用 clang)
+pnpm run local:build
+
+# 指定编译器
+pnpm vite-node ./scripts/local-build-prebuilt.ts --compiler gcc
+
+# 只编译特定目标
+pnpm vite-node ./scripts/local-build-prebuilt.ts --target linux-x64 --gpu false
+```
+
+### 3. 生成发布包
+
+编译完成后，将二进制文件打包到 `packages/prebuilt-llama-node/*` 中：
+
+```bash
+pnpm vite-node ./scripts/prepareStandalonePrebuiltBinaryModules.ts
+```
+
