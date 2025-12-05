@@ -689,7 +689,7 @@ jobs:
         id: set-npm-url
         run: |
           if [ -f .semanticRelease.npmPackage.deployedVersion.txt ]; then
-            echo "npm-url=https://www.npmjs.com/package/node-llama-cpp/v/$(cat .semanticRelease.npmPackage.deployedVersion.txt)" >> $GITHUB_OUTPUT
+            echo "npm-url=https://www.npmjs.com/package/@isdk/llama-node/v/$(cat .semanticRelease.npmPackage.deployedVersion.txt)" >> $GITHUB_OUTPUT
           fi
       - name: Set package version to GITHUB_OUTPUT
         id: set-package-version
