@@ -108,6 +108,42 @@ src/evaluator/LlamaCompletion.ts
    export const builtinLlamaCppRelease = await getBinariesGithubRelease();
    ```
 
+#### GitHub Actions 工作流参数
+
+`.github/workflows/build.yml` 使用三个正交的 choice 参数控制构建流程：
+
+**binary_mode（二进制构建模式）**：
+- `skip` - 跳过构建（仅测试）
+- `build` ⭐ - 正常构建（使用缓存）
+- `force_rebuild` - 强制重新构建（忽略缓存）
+
+**release_mode（发布模式）**：
+- `skip` - 跳过发布
+- `normal` ⭐ - 正常发布（已存在版本跳过）
+- `force_republish` - 强制重新发布（覆盖已存在版本）
+
+**test_mode（测试模式）**：
+- `all` ⭐ - 运行所有测试
+- `standalone` - 仅 standalone 测试
+- `model_dependent` - 仅 model dependent 测试
+- `skip` - 跳过所有测试
+
+> ⭐ 表示默认值
+
+**参数设计原则**：
+- **正交性**：每个维度独立选择，不会互相冲突
+- **无歧义**：每个选项的行为明确
+- **灵活组合**：可根据需要自由组合
+
+**常用场景**：
+
+| 场景 | binary_mode | release_mode | test_mode |
+|------|-------------|--------------|-----------|
+| 完整发布 | `build` | `normal` | `all` |
+| 仅测试 | `skip` | `skip` | `all` |
+| 修复 prebuilt | `build` | `force_republish` | `skip` |
+| 强制重建发布 | `force_rebuild` | `force_republish` | `all` |
+
 #### GitHub Actions 构建缓存策略
 
 在 `.github/workflows/build.yml` 中，我们使用以下策略来缓存预构建的二进制文件：
@@ -272,6 +308,194 @@ ef75a89fdb39ba33a6896ba314026e1b6826caba
     *   发布时会被移动到 `fallback` 子目录（例如 `@isdk/linux-x64-cuda-ext` 包中的 `bins/linux-x64-cuda/fallback/libggml-cuda.so`）。
     *   **目的**: 兼容旧版显卡驱动。如果用户的驱动不支持 CUDA 13，`llama-node` 会自动尝试加载这个 fallback 版本。
     *   这确保了更广泛的硬件兼容性，而无需强制用户升级驱动。
+
+### 预编译二进制模块分发系统
+
+项目使用 monorepo 多包分发模式，将预编译的原生二进制文件打包为独立的、平台特定的 npm 包。这种架构让用户只需安装主包，npm 会自动根据当前平台选择并安装合适的预编译包，避免在用户机器上编译，大大提升安装速度。
+
+#### 包结构
+
+```
+@isdk/llama-node (主包)
+├── @isdk/llama-node-linux-x64 (可选依赖)
+├── @isdk/llama-node-linux-x64-cuda (可选依赖)
+├── @isdk/llama-node-linux-x64-cuda-ext (可选依赖 - 仅 CUDA 12.4 fallback)
+├── @isdk/llama-node-mac-arm64-metal (可选依赖)
+├── @isdk/llama-node-win-x64 (可选依赖)
+└── ... (其他平台)
+```
+
+每个预编译包：
+- 包含特定平台/配置的编译好的二进制文件（在 `bins/` 目录）
+- 导出一个 `getBinsDir()` 函数，返回二进制文件的路径和版本号
+- 通过 `os`、`cpu`、`libc` 字段限制安装平台
+
+#### 发布流程中的关键脚本
+
+在 GitHub Actions 的 `release` job 中，发布流程按以下顺序执行：
+
+##### 1. **movePrebuiltBinariesToStandaloneModules.ts**
+
+**目的**：将编译好的二进制文件从统一的 `bins/` 目录分发到各个独立的、平台特定的 npm 包目录中。
+
+**输入状态**：
+```
+bins/
+├── linux-x64/
+│   └── llama-node.node
+├── linux-x64-cuda/
+│   ├── llama-node.node
+│   ├── libggml-cuda.so (CUDA 13.0)
+│   └── fallback/
+│       └── libggml-cuda.so (CUDA 12.4)
+└── mac-arm64-metal/
+    └── llama-node.node
+```
+
+**主要功能**：
+
+1. **分发完整二进制目录** (`moveBinariesFolderToStandaloneModule`)
+   ```typescript
+   // 将 bins/linux-x64/ 移动到 packages/prebuilt-llama-node/linux-x64/bins/linux-x64/
+   await moveBinariesFolderToStandaloneModule(
+     (folderName) => folderName.startsWith("linux-x64"),
+     "@isdk/llama-node-linux-x64"
+   );
+   ```
+
+2. **分发 fallback 二进制** (`moveBinariesFallbackDirToStandaloneExtModule`)
+   ```typescript
+   // 将 bins/linux-x64-cuda/fallback/ 移动到 packages/prebuilt-llama-node/linux-x64-cuda-ext/
+   await moveBinariesFallbackDirToStandaloneExtModule(
+     (folderName) => folderName.startsWith("linux-x64-cuda"),
+     "@isdk/llama-node-linux-x64-cuda-ext"
+   );
+   ```
+
+**关键设计决策**：
+
+- **路径提取**：从 scoped 包名中提取目录名
+  ```typescript
+  // "@isdk/llama-node-linux-x64" -> "linux-x64"
+  const dirName = packageName.replace(/^@[^/]+\/llama-node-/, "");
+  const packagePath = path.join(packageDirectory, "prebuilt-llama-node", dirName);
+  ```
+  这避免了创建嵌套的 `@isdk` 目录，保持目录结构扁平化。
+
+- **执行顺序很重要**：必须先移动 fallback，再移动主目录
+  ```typescript
+  // 正确顺序：
+  await moveBinariesFallbackDirToStandaloneExtModule(..., "linux-x64-cuda-ext"); // 1. 先移走 fallback
+  await moveBinariesFolderToStandaloneModule(..., "linux-x64-cuda");           // 2. 再移走整个目录
+  ```
+  如果顺序反了，第二步会把整个目录（包括 fallback）都移走，第一步就找不到 fallback 了。
+
+- **追踪标记**：创建 `.moved.txt` 文件记录移动操作
+  ```typescript
+  // 生成 bins/_linux-x64.moved.txt
+  await fs.writeFile(
+    path.join(binsDirectory, "_" + folderName + ".moved.txt"),
+    `Moved to package "${packageName}"`,
+    "utf8"
+  );
+  ```
+  用于防止重复移动、调试追踪和 CI 日志记录。
+
+**输出状态**：
+```
+packages/prebuilt-llama-node/
+├── linux-x64/
+│   ├── package.json
+│   ├── src/index.ts
+│   └── bins/linux-x64/
+│       └── llama-node.node
+├── linux-x64-cuda/
+│   └── bins/linux-x64-cuda/
+│       ├── llama-node.node
+│       └── libggml-cuda.so (CUDA 13.0)
+├── linux-x64-cuda-ext/
+│   └── bins/linux-x64-cuda/fallback/
+│       └── libggml-cuda.so (CUDA 12.4)
+└── mac-arm64-metal/
+    └── bins/mac-arm64-metal/
+        └── llama-node.node
+```
+
+##### 2. **prepareStandalonePrebuiltBinaryModules.ts**
+
+**目的**：为发布准备独立的预编译二进制模块包，确保每个包都处于生产就绪状态。
+
+**主要操作**：
+
+对每个预编译包执行：
+
+1. **安装依赖并编译**
+   ```bash
+   npm install --force  # 安装 devDependencies (如 typescript)
+   npm run build        # 编译 src/index.ts -> dist/index.js
+   ```
+
+   每个包的 `src/index.ts` 导出一个简单的函数：
+   ```typescript
+   export function getBinsDir() {
+     return {
+       binsDir: path.join(__dirname, "..", "bins"),
+       packageVersion: "1.0.0"
+     };
+   }
+   ```
+
+2. **清理 package.json**
+   ```typescript
+   delete packageJson.devDependencies;  // 删除 typescript 等开发依赖
+   delete packageJson.scripts;          // 删除 build、watch 等脚本
+
+   // 只保留 postinstall 脚本（如果存在）
+   if (postinstall != null)
+     packageJson.scripts = { postinstall };
+   ```
+
+**为什么需要清理？**
+
+- **减小包体积**：用户安装时不需要下载 TypeScript 等开发工具
+- **简化结构**：用户看到的 package.json 更简洁，只包含运行时必需的内容
+- **安全性**：避免暴露不必要的开发脚本
+- **性能优化**：npm install 更快，因为没有 devDependencies
+
+**最终发布的包结构**：
+```
+@isdk/llama-node-linux-x64/
+├── package.json (已清理，无 devDependencies 和多余 scripts)
+├── dist/
+│   └── index.js (编译后的 JavaScript)
+├── bins/
+│   └── linux-x64/
+│       └── llama-node.node
+├── README.md
+└── LICENSE
+```
+
+#### 常见问题修复
+
+**问题**：在 GitHub Actions 中报错 `Cannot read properties of null (reading 'matches')`，提示尝试进入不存在的目录 `packages/prebuilt-llama-node/@isdk`
+
+**原因**：
+- `movePrebuiltBinariesToStandaloneModules.ts` 直接使用包含 scope 的完整包名作为目录路径
+- 导致创建了嵌套目录 `packages/prebuilt-llama-node/@isdk/llama-node-linux-x64`
+- `prepareStandalonePrebuiltBinaryModules.ts` 遍历时会尝试进入 `@isdk` 目录执行 `npm install`
+- 但 `@isdk` 只是包含多个包的 scope 目录，不是有效的 npm 包
+
+**解决方案**：
+在 `movePrebuiltBinariesToStandaloneModules.ts` 中添加路径提取逻辑：
+```typescript
+const dirName = packageName.replace(/^@[^/]+\/llama-node-/, "");
+const packagePath = path.join(packageDirectory, "prebuilt-llama-node", dirName);
+```
+
+这确保了：
+- `@isdk/llama-node-linux-x64` → `packages/prebuilt-llama-node/linux-x64`
+- `@isdk/llama-node-linux-x64-cuda-ext` → `packages/prebuilt-llama-node/linux-x64-cuda-ext`
+- package.json 中的包名仍保持 scoped 格式
 
 ## Issues
 

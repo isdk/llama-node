@@ -7,27 +7,31 @@ on:
   # pull_request:
   workflow_dispatch:
     inputs:
-      skip_binaries:
-        description: '跳过二进制构建（仅测试）'
-        required: false
-        default: false
-        type: boolean
-      skip_release:
-        description: '跳过发布到npm'
-        required: false
-        default: false
-        type: boolean
-      skip_tests:
-        description: '跳过测试'
-        required: false
-        default: false
-        type: boolean
-      force_rebuild_binaries:
-        description: '强制重新构建二进制（即使有缓存）'
-        required: false
-        default: false
-        type: boolean
-
+      binary_mode:
+        description: '二进制构建模式'
+        type: choice
+        default: 'build'
+        options:
+          - 'skip'          # 跳过构建（仅测试）
+          - 'build'         # 正常构建（使用缓存）
+          - 'force_rebuild' # 强制重新构建（忽略缓存）
+      release_mode:
+        description: '发布模式'
+        type: choice
+        default: 'normal'
+        options:
+          - 'skip'            # 跳过发布
+          - 'normal'          # 正常发布（已存在版本跳过）
+          - 'force_republish' # 强制重新发布（覆盖已存在版本）
+      test_mode:
+        description: '测试模式'
+        type: choice
+        default: 'all'
+        options:
+          - 'all'              # 运行所有测试
+          - 'standalone'       # 仅 standalone 测试
+          - 'model_dependent'  # 仅 model dependent 测试
+          - 'skip'             # 跳过所有测试
 
 jobs:
   build:
@@ -75,11 +79,13 @@ jobs:
 
   build-binaries:
     name: Build binaries - ${{ matrix.config.name }}
-    # Skip if: manual trigger with skip_binaries OR commit has skip tag
+    # Skip if: binary_mode is 'skip' OR release_mode is 'skip' (no need to build if not releasing)
+    # Commit message tags also control skipping
     if: |
-      (github.event_name != 'workflow_dispatch' || !inputs.skip_binaries) &&
+      (github.event_name != 'workflow_dispatch' || (inputs.binary_mode != 'skip' && inputs.release_mode != 'skip')) &&
       !contains(github.event.head_commit.message, '[skip-binaries]') &&
-      !contains(github.event.head_commit.message, '[skip-build]')
+      !contains(github.event.head_commit.message, '[skip-build]') &&
+      !contains(github.event.head_commit.message, '[skip-release]')
     needs:
       - build
     runs-on: ${{ matrix.config.os }}
@@ -155,7 +161,7 @@ jobs:
 
       - name: Cache prebuilt binaries
         id: cache-binaries
-        if: inputs.force_rebuild_binaries != true
+        if: inputs.binary_mode != 'force_rebuild'
         uses: actions/cache@v4
         with:
           path: bins
@@ -417,8 +423,9 @@ jobs:
 
   resolve-next-release:
     name: Resolve next release
+    # Skip if release_mode is 'skip' or binary_mode is 'skip'
     if: |
-      (github.event_name != 'workflow_dispatch' || (!inputs.skip_binaries && !inputs.skip_release)) &&
+      (github.event_name != 'workflow_dispatch' || (inputs.binary_mode != 'skip' && inputs.release_mode != 'skip')) &&
       !contains(github.event.head_commit.message, '[skip-binaries]') &&
       !contains(github.event.head_commit.message, '[skip-build]')
     runs-on: ubuntu-latest
@@ -483,8 +490,9 @@ jobs:
 
   standalone-tests:
     name: Standalone tests
+    # Run if test_mode is 'all' or 'standalone'
     if: |
-      github.event_name != 'workflow_dispatch' || !inputs.skip_tests
+      github.event_name != 'workflow_dispatch' || (inputs.test_mode == 'all' || inputs.test_mode == 'standalone')
     runs-on: ubuntu-22.04
     needs:
       - build
@@ -527,8 +535,9 @@ jobs:
 
   model-dependent-tests:
     name: Model dependent tests
+    # Run if test_mode is 'all' or 'model_dependent'
     if: |
-      github.event_name != 'workflow_dispatch' || !inputs.skip_tests
+      github.event_name != 'workflow_dispatch' || (inputs.test_mode == 'all' || inputs.test_mode == 'model_dependent')
     runs-on: macos-13
     env:
       NODE_LLAMA_CPP_GPU: false
@@ -583,9 +592,9 @@ jobs:
 
   release:
     name: Release
-    # Skip release if binaries are skipped (release needs binaries) or if no next version
+    # Skip if release_mode is 'skip' or binary_mode is 'skip', or no next version
     if: |
-      (github.event_name != 'workflow_dispatch' || (!inputs.skip_binaries && !inputs.skip_release)) &&
+      (github.event_name != 'workflow_dispatch' || (inputs.binary_mode != 'skip' && inputs.release_mode != 'skip')) &&
       !contains(github.event.head_commit.message, '[skip-binaries]') &&
       !contains(github.event.head_commit.message, '[skip-build]') &&
       needs.resolve-next-release.outputs.next-version != '' &&
@@ -669,6 +678,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           GH_RELEASE_REF: ${{ github.ref }}
+          FORCE_REPUBLISH_PREBUILT: ${{ inputs.release_mode == 'force_republish' }}
         run: |
           echo "//registry.npmjs.org/:_authToken=\${NPM_TOKEN}" > ~/.npmrc
           export DRY_RUN_RESULT_FILE_PATH="$(pwd)/semanticReleaseDryRunReleaseResult.json"
