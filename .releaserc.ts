@@ -82,7 +82,9 @@ const config: Omit<GlobalConfig, "repositoryUrl" | "tagFormat"> = {
             }
         }],
         ["@semantic-release/exec", {
-            publishCmd: "npx --no vite-node ./scripts/publishStandalonePrebuiltBinaryModules.ts --packageVersion \"${nextRelease.version}\""
+            publishCmd: process.env.FORCE_REPUBLISH_PREBUILT === "true"
+                ? "npx --no vite-node ./scripts/publishStandalonePrebuiltBinaryModules.ts --packageVersion \"${nextRelease.version}\" --force"
+                : "npx --no vite-node ./scripts/publishStandalonePrebuiltBinaryModules.ts --packageVersion \"${nextRelease.version}\""
         }],
         ["@semantic-release/npm", {
             npmPublish: true,

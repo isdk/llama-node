@@ -151,7 +151,48 @@ expect(res.contextSize).to.be.lessThan(13500);
 | `model-dependent-tests` | 运行模型测试 | ~7分钟 |
 | `release` | 语义化发布到npm | ~15分钟 |
 
-### 跳过耗时步骤
+### 手动触发参数
+
+通过 `workflow_dispatch` 手动触发时，可使用以下三个正交参数：
+
+#### 1. binary_mode（二进制构建模式）
+
+| 选项 | 说明 |
+|------|------|
+| `skip` | 跳过构建（仅测试） |
+| `build` ⭐ | 正常构建（使用缓存） |
+| `force_rebuild` | 强制重新构建（忽略缓存） |
+
+#### 2. release_mode（发布模式）
+
+| 选项 | 说明 |
+|------|------|
+| `skip` | 跳过发布 |
+| `normal` ⭐ | 正常发布（已存在版本跳过） |
+| `force_republish` | 强制重新发布（覆盖已存在版本） |
+
+#### 3. test_mode（测试模式）
+
+| 选项 | 说明 |
+|------|------|
+| `all` ⭐ | 运行所有测试 |
+| `standalone` | 仅 standalone 测试 |
+| `model_dependent` | 仅 model dependent 测试 |
+| `skip` | 跳过所有测试 |
+
+> ⭐ 表示默认值
+
+**常用场景**：
+
+| 场景 | binary_mode | release_mode | test_mode |
+|------|-------------|--------------|-----------|
+| 完整发布流程 | `build` | `normal` | `all` |
+| 仅运行测试 | `skip` | `skip` | `all` |
+| 修复 prebuilt 包 | `build` | `force_republish` | `skip` |
+| 强制完全重建发布 | `force_rebuild` | `force_republish` | `all` |
+| 快速 standalone 测试 | `skip` | `skip` | `standalone` |
+
+### 通过 Commit 消息控制
 
 在commit消息中添加标记可以跳过特定步骤：
 
@@ -159,16 +200,12 @@ expect(res.contextSize).to.be.lessThan(13500);
 # 跳过二进制构建（节省90%时间）
 git commit -m "test: fix tests [skip-binaries]"
 
+# 跳过发布
+git commit -m "test: update tests [skip-release]"
+
 # 完全跳过工作流
 git commit -m "docs: update README [skip ci]"
 ```
-
-**效果对比**:
-- 普通: ~2小时（包含所有二进制构建+发布）
-- `[skip-binaries]`: ~10分钟（只运行测试，跳过构建和发布）⭐
-- `[skip ci]`: 完全跳过工作流
-
-详见: `.github/RUN_TESTS_ONLY.md`
 
 ---
 
