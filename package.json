@@ -120,6 +120,9 @@
     }
   ],
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
   "preferUnplugged": true,
   "bugs": {
     "url": "https://github.com/isdk/llama-node/issues"
