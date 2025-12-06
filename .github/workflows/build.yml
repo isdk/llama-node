@@ -125,18 +125,19 @@ jobs:
           # First check if entire job should be skipped based on inputs/commit message
           SHOULD_SKIP_JOB="false"
 
-          # For workflow_dispatch: check binary_mode and release_mode
+          # For workflow_dispatch: only skip if binary_mode is 'skip'
+          # Note: release_mode='skip' should NOT skip building, only skip publishing
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            if [ "${{ inputs.binary_mode }}" = "skip" ] || [ "${{ inputs.release_mode }}" = "skip" ]; then
+            if [ "${{ inputs.binary_mode }}" = "skip" ]; then
               SHOULD_SKIP_JOB="true"
-              echo "Skipping: binary_mode or release_mode is 'skip'"
+              echo "Skipping: binary_mode is 'skip'"
             fi
           else
             # For push/pull_request: check commit message tags
+            # Note: [skip-release] should NOT skip building, only skip publishing
             COMMIT_MSG="${{ github.event.head_commit.message }}"
             if [[ "$COMMIT_MSG" == *"[skip-binaries]"* ]] || \
-               [[ "$COMMIT_MSG" == *"[skip-build]"* ]] || \
-               [[ "$COMMIT_MSG" == *"[skip-release]"* ]]; then
+               [[ "$COMMIT_MSG" == *"[skip-build]"* ]]; then
               SHOULD_SKIP_JOB="true"
               echo "Skipping: commit message contains skip tag"
             fi
