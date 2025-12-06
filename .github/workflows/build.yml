@@ -127,17 +127,31 @@ jobs:
         id: check-platform
         shell: bash
         run: |
+          # Get build platforms and trim whitespace
           BUILD_PLATFORMS="${{ inputs.build_platforms || 'all' }}"
+          BUILD_PLATFORMS=$(echo "$BUILD_PLATFORMS" | tr -d ' ')
           ARTIFACT="${{ matrix.config.artifact }}"
           PLATFORM_GROUP="${{ matrix.config.platform_group }}"
+
+          echo "BUILD_PLATFORMS: '$BUILD_PLATFORMS'"
+          echo "ARTIFACT: '$ARTIFACT'"
+          echo "PLATFORM_GROUP: '$PLATFORM_GROUP'"
+
+          # Function to check if a value is in a comma-separated list
+          contains_value() {
+            local list="$1"
+            local value="$2"
+            # Add commas to both ends to ensure exact matching
+            [[ ",$list," == *",$value,"* ]]
+          }
 
           if [ "$BUILD_PLATFORMS" = "all" ] || [ -z "$BUILD_PLATFORMS" ]; then
             echo "should_build=true" >> $GITHUB_OUTPUT
             echo "Building all platforms, including $ARTIFACT"
-          elif [[ "$BUILD_PLATFORMS" == *"$ARTIFACT"* ]]; then
+          elif contains_value "$BUILD_PLATFORMS" "$ARTIFACT"; then
             echo "should_build=true" >> $GITHUB_OUTPUT
             echo "Platform $ARTIFACT explicitly included"
-          elif [[ "$BUILD_PLATFORMS" == *"$PLATFORM_GROUP"* ]]; then
+          elif contains_value "$BUILD_PLATFORMS" "$PLATFORM_GROUP"; then
             echo "should_build=true" >> $GITHUB_OUTPUT
             echo "Platform group $PLATFORM_GROUP matches, building $ARTIFACT"
           else
