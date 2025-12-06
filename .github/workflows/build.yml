@@ -32,6 +32,11 @@ on:
           - 'standalone'       # 仅 standalone 测试
           - 'model_dependent'  # 仅 model dependent 测试
           - 'skip'             # 跳过所有测试
+      build_platforms:
+        description: '构建平台 (可多选，逗号分隔: win-1,win-2,linux-1,linux-2,mac-x64,mac-arm64)'
+        type: string
+        default: 'all'
+        # 可选值: all, windows, linux, macos, win-1, win-2, linux-1, linux-2, mac-x64, mac-arm64
 
 jobs:
   build:
@@ -96,43 +101,77 @@ jobs:
           - name: "Windows (1)"
             os: windows-2022
             artifact: "win-1"
+            platform_group: "windows"
           - name: "Windows (2)"
             os: windows-2022
             artifact: "win-2"
+            platform_group: "windows"
           - name: "Ubuntu (1)"
             os: ubuntu-22.04
             artifact: "linux-1"
+            platform_group: "linux"
           - name: "Ubuntu (2)"
             os: ubuntu-22.04
             artifact: "linux-2"
+            platform_group: "linux"
           - name: "macOS x64"
             os: macos-13
             artifact: "mac-x64"
+            platform_group: "macos"
           - name: "macOS arm64"
             os: macos-14
             artifact: "mac-arm64"
+            platform_group: "macos"
     steps:
+      - name: Check if platform should be built
+        id: check-platform
+        shell: bash
+        run: |
+          BUILD_PLATFORMS="${{ inputs.build_platforms || 'all' }}"
+          ARTIFACT="${{ matrix.config.artifact }}"
+          PLATFORM_GROUP="${{ matrix.config.platform_group }}"
+
+          if [ "$BUILD_PLATFORMS" = "all" ] || [ -z "$BUILD_PLATFORMS" ]; then
+            echo "should_build=true" >> $GITHUB_OUTPUT
+            echo "Building all platforms, including $ARTIFACT"
+          elif [[ "$BUILD_PLATFORMS" == *"$ARTIFACT"* ]]; then
+            echo "should_build=true" >> $GITHUB_OUTPUT
+            echo "Platform $ARTIFACT explicitly included"
+          elif [[ "$BUILD_PLATFORMS" == *"$PLATFORM_GROUP"* ]]; then
+            echo "should_build=true" >> $GITHUB_OUTPUT
+            echo "Platform group $PLATFORM_GROUP matches, building $ARTIFACT"
+          else
+            echo "should_build=false" >> $GITHUB_OUTPUT
+            echo "Skipping $ARTIFACT (not in: $BUILD_PLATFORMS)"
+          fi
+
       - uses: actions/checkout@v4
+        if: steps.check-platform.outputs.should_build == 'true'
       - uses: pnpm/action-setup@v4
+        if: steps.check-platform.outputs.should_build == 'true'
         with:
           version: 10
       - uses: actions/setup-node@v4
+        if: steps.check-platform.outputs.should_build == 'true'
         with:
           node-version: "20"
           cache: "pnpm"
 
       - name: Download build artifact
+        if: steps.check-platform.outputs.should_build == 'true'
         uses: actions/download-artifact@v4
         with:
           name: build
           path: dist
       - name: Download llama.cpp artifact
+        if: steps.check-platform.outputs.should_build == 'true'
         uses: actions/download-artifact@v4
         with:
           name: llama.cpp
           path: llama
 
       - name: Get llama.cpp version for cache
+        if: steps.check-platform.outputs.should_build == 'true'
         id: llama-cpp-version
         shell: bash
         run: |
@@ -161,14 +200,14 @@ jobs:
 
       - name: Cache prebuilt binaries
         id: cache-binaries
-        if: inputs.binary_mode != 'force_rebuild'
+        if: steps.check-platform.outputs.should_build == 'true' && inputs.binary_mode != 'force_rebuild'
         uses: actions/cache@v4
         with:
           path: bins
           key: prebuilt-binaries-${{ matrix.config.artifact }}-${{ steps.llama-cpp-version.outputs.version }}-${{ hashFiles('llama/addon/**', 'llama/CMakeLists.txt') }}
 
       - name: Install dependencies on Windows
-        if: startsWith(matrix.config.os, 'windows') && steps.cache-binaries.outputs.cache-hit != 'true'
+        if: steps.check-platform.outputs.should_build == 'true' && startsWith(matrix.config.os, 'windows') && steps.cache-binaries.outputs.cache-hit != 'true'
         run: |
           choco install cmake.install --version=3.31.1
           choco install cmake --version=3.31.1
@@ -176,13 +215,13 @@ jobs:
           choco install llvm
 
       - name: Setup MSVC for Windows CUDA
-        if: startsWith(matrix.config.os, 'windows') && steps.cache-binaries.outputs.cache-hit != 'true'
+        if: steps.check-platform.outputs.should_build == 'true' && startsWith(matrix.config.os, 'windows') && steps.cache-binaries.outputs.cache-hit != 'true'
         uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: x64
 
       - name: Install dependencies on Ubuntu (1)
-        if: matrix.config.name == 'Ubuntu (1)' && steps.cache-binaries.outputs.cache-hit != 'true'
+        if: steps.check-platform.outputs.should_build == 'true' && matrix.config.name == 'Ubuntu (1)' && steps.cache-binaries.outputs.cache-hit != 'true'
         run: |
           sudo bash .github/scripts/setup-apt-mirror.sh || true
           sudo apt-get update
@@ -201,7 +240,7 @@ jobs:
           cmake --version
 
       - name: Install dependencies on Ubuntu (2)
-        if: matrix.config.name == 'Ubuntu (2)' && steps.cache-binaries.outputs.cache-hit != 'true'
+        if: steps.check-platform.outputs.should_build == 'true' && matrix.config.name == 'Ubuntu (2)' && steps.cache-binaries.outputs.cache-hit != 'true'
         run: |
           sudo bash .github/scripts/setup-apt-mirror.sh || true
           sudo apt-get update
@@ -214,7 +253,7 @@ jobs:
           cmake --version
 
       - name: Install Cuda 13.0 on Windows (1)
-        if: matrix.config.name == 'Windows (1)' && steps.cache-binaries.outputs.cache-hit != 'true'
+        if: steps.check-platform.outputs.should_build == 'true' && matrix.config.name == 'Windows (1)' && steps.cache-binaries.outputs.cache-hit != 'true'
         shell: bash
         timeout-minutes: 60
         run: |
@@ -234,7 +273,7 @@ jobs:
           echo "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v13.0\\bin" >> $GITHUB_PATH
 
       - name: Install Cuda 12.4 on Windows (2)
-        if: matrix.config.name == 'Windows (2)' && steps.cache-binaries.outputs.cache-hit != 'true'
+        if: steps.check-platform.outputs.should_build == 'true' && matrix.config.name == 'Windows (2)' && steps.cache-binaries.outputs.cache-hit != 'true'
         uses: Jimver/cuda-toolkit@v0.2.15
         with:
           cuda: '12.4.0'
@@ -243,21 +282,21 @@ jobs:
           use-local-cache: false
 
       - name: Install Cuda 13.0 on Ubuntu (1)
-        if: matrix.config.name == 'Ubuntu (1)' && steps.cache-binaries.outputs.cache-hit != 'true'
+        if: steps.check-platform.outputs.should_build == 'true' && matrix.config.name == 'Ubuntu (1)' && steps.cache-binaries.outputs.cache-hit != 'true'
         uses: Jimver/cuda-toolkit@v0.2.27
         with:
           cuda: '13.0.0'
           method: 'network'
 
       - name: Install Cuda 12.4 on Ubuntu (2)
-        if: matrix.config.name == 'Ubuntu (2)' && steps.cache-binaries.outputs.cache-hit != 'true'
+        if: steps.check-platform.outputs.should_build == 'true' && matrix.config.name == 'Ubuntu (2)' && steps.cache-binaries.outputs.cache-hit != 'true'
         uses: Jimver/cuda-toolkit@v0.2.15
         with:
           cuda: '12.4.0'
           method: 'network'
 
       - name: Install Vulkan SDK on Windows (1)
-        if: matrix.config.name == 'Windows (1)' && steps.cache-binaries.outputs.cache-hit != 'true'
+        if: steps.check-platform.outputs.should_build == 'true' && matrix.config.name == 'Windows (1)' && steps.cache-binaries.outputs.cache-hit != 'true'
         shell: powershell
         env:
           VULKAN_VERSION: 1.4.313.2
@@ -268,7 +307,7 @@ jobs:
           Add-Content $env:GITHUB_PATH "C:\VulkanSDK\${env:VULKAN_VERSION}\bin"
 
       - name: Install Vulkan SDK on Ubuntu
-        if: matrix.config.name == 'Ubuntu (1)' && steps.cache-binaries.outputs.cache-hit != 'true'
+        if: steps.check-platform.outputs.should_build == 'true' && matrix.config.name == 'Ubuntu (1)' && steps.cache-binaries.outputs.cache-hit != 'true'
         run: |
           sudo bash .github/scripts/setup-apt-mirror.sh || true
           wget -qO- https://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo tee /etc/apt/trusted.gpg.d/lunarg.asc
@@ -277,13 +316,13 @@ jobs:
           sudo apt install vulkan-sdk
 
       - name: Install dependencies on macOS
-        if: matrix.config.name == 'macOS' && steps.cache-binaries.outputs.cache-hit != 'true'
+        if: steps.check-platform.outputs.should_build == 'true' && matrix.config.name == 'macOS' && steps.cache-binaries.outputs.cache-hit != 'true'
         run: |
           brew install cmake ninja
           alias make=cmake
 
       - name: Setup & Build
-        if: steps.cache-binaries.outputs.cache-hit != 'true'
+        if: steps.check-platform.outputs.should_build == 'true' && steps.cache-binaries.outputs.cache-hit != 'true'
         id: build
         shell: bash
         timeout-minutes: 300
@@ -422,6 +461,7 @@ jobs:
       #     fi
 
       - name: Publish artifact
+        if: steps.check-platform.outputs.should_build == 'true'
         uses: actions/upload-artifact@v4
         with:
           include-hidden-files: true

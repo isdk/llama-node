@@ -128,6 +128,14 @@ src/evaluator/LlamaCompletion.ts
 - `model_dependent` - 仅 model dependent 测试
 - `skip` - 跳过所有测试
 
+**build_platforms（构建平台）**：
+- `all` ⭐ - 构建所有平台
+- `windows` - 仅 Windows 平台 (win-1, win-2)
+- `linux` - 仅 Linux 平台 (linux-1, linux-2)
+- `macos` - 仅 macOS 平台 (mac-x64, mac-arm64)
+- 也可以指定具体平台：`win-1`, `win-2`, `linux-1`, `linux-2`, `mac-x64`, `mac-arm64`
+- 支持逗号分隔多选：`win-1,linux-2,mac-arm64`
+
 > ⭐ 表示默认值
 
 **参数设计原则**：
@@ -137,12 +145,13 @@ src/evaluator/LlamaCompletion.ts
 
 **常用场景**：
 
-| 场景 | binary_mode | release_mode | test_mode |
-|------|-------------|--------------|-----------|
-| 完整发布 | `build` | `normal` | `all` |
-| 仅测试 | `skip` | `skip` | `all` |
-| 修复 prebuilt | `build` | `force_republish` | `skip` |
-| 强制重建发布 | `force_rebuild` | `force_republish` | `all` |
+| 场景 | binary_mode | release_mode | test_mode | build_platforms |
+|------|-------------|--------------|-----------|-----------------|
+| 完整发布 | `build` | `normal` | `all` | `all` |
+| 仅测试 | `skip` | `skip` | `all` | - |
+| 修复 prebuilt | `build` | `force_republish` | `skip` | `all` |
+| 只构建 Windows CUDA | `build` | `skip` | `skip` | `win-1,win-2` |
+| 只构建 Linux | `build` | `skip` | `skip` | `linux` |
 
 #### GitHub Actions 构建缓存策略
 
