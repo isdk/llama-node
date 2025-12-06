@@ -109,7 +109,7 @@ export async function BuildLlamaCppCommand({
         process.exit(1);
     }
 
-    const includeBuildOptionsInBinaryFolderName = !noCustomCmakeBuildOptionsInBinaryFolderName || !isCI;
+    const includeBuildOptionsInBinaryFolderName = (!noCustomCmakeBuildOptionsInBinaryFolderName && !ciMode) || !isCI;
 
     const clonedLlamaCppRepoReleaseInfo = await getClonedLlamaCppRepoReleaseInfo();
 
@@ -151,8 +151,10 @@ export async function BuildLlamaCppCommand({
             downloadedCmake = true;
         }
 
+        const currentCustomCmakeOptions = new Map(customCmakeOptions);
+
         const buildOptions: BuildOptions = {
-            customCmakeOptions,
+            customCmakeOptions: currentCustomCmakeOptions,
             progressLogs: true,
             platform,
             platformInfo,

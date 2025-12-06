@@ -99,7 +99,8 @@ export async function compileLlamaCpp(buildOptions: BuildOptions, compileOptions
 
                 const cmakePathArgs = await getCmakePathArgs();
                 const cmakeGeneratorArgs = getCmakeGeneratorArgs(buildOptions.platform, buildOptions.arch, useWindowsLlvm);
-                const toolchainFile = await getToolchainFileForArch(buildOptions.arch, useWindowsLlvm);
+                const isClang = buildOptions.customCmakeOptions.get("CMAKE_C_COMPILER") === "clang";
+                const toolchainFile = await getToolchainFileForArch(buildOptions.arch, useWindowsLlvm, isClang);
                 const runtimeVersion = nodeTarget.startsWith("v") ? nodeTarget.slice("v".length) : nodeTarget;
                 const cmakeCustomOptions = new Map(buildOptions.customCmakeOptions);
                 const cmakeToolchainOptions = new Map<string, string>();
@@ -129,6 +130,14 @@ export async function compileLlamaCpp(buildOptions: BuildOptions, compileOptions
 
                 if (buildOptions.gpu === "cuda" && !cmakeCustomOptions.has("GGML_CUDA"))
                     cmakeCustomOptions.set("GGML_CUDA", "1");
+
+                if (buildOptions.gpu === "cuda" && platform === "win" && useWindowsLlvm && !cmakeCustomOptions.has("CMAKE_CUDA_HOST_COMPILER")) {
+                    const cxxCompiler = cmakeCustomOptions.get("CMAKE_CXX_COMPILER");
+                    if (cxxCompiler)
+                        cmakeCustomOptions.set("CMAKE_CUDA_HOST_COMPILER", cxxCompiler);
+                    else
+                        cmakeCustomOptions.set("CMAKE_CUDA_HOST_COMPILER", "clang++");
+                }
 
                 if (buildOptions.gpu === "vulkan" && !cmakeCustomOptions.has("GGML_VULKAN"))
                     cmakeCustomOptions.set("GGML_VULKAN", "1");
@@ -680,8 +689,13 @@ async function getCmakePathArgs() {
     return ["--cmake-path", cmakePath];
 }
 
-async function getToolchainFileForArch(targetArch: string, windowsLlvmSupport: boolean = false) {
+async function getToolchainFileForArch(targetArch: string, windowsLlvmSupport: boolean = false, isClang: boolean = false) {
     let toolchainPrefix = "";
+    let toolchainSuffix = "";
+
+    if (isClang && process.platform === "linux" && process.arch !== targetArch) {
+        toolchainSuffix = ".clang";
+    }
 
     if (process.platform === "win32" && process.arch === "arm64") {
         // a toolchain is needed to cross-compile to arm64 on Windows, and to compile on arm64 on Windows
@@ -693,7 +707,7 @@ async function getToolchainFileForArch(targetArch: string, windowsLlvmSupport: b
     const platform = process.platform;
     const hostArch = process.arch;
 
-    const toolchainFilename = `${toolchainPrefix}${platform}.host-${hostArch}.target-${targetArch}.cmake`;
+    const toolchainFilename = `${toolchainPrefix}${platform}.host-${hostArch}.target-${targetArch}${toolchainSuffix}.cmake`;
 
     const filePath = path.join(llamaToolchainsDirectory, toolchainFilename);
 
@@ -778,5 +792,6 @@ async function getLinuxOpenMpLibPath() {
         // ignore
     }
 
+    return null;
     return null;
 }
