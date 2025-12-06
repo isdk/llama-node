@@ -84,14 +84,8 @@ jobs:
 
   build-binaries:
     name: Build binaries - ${{ matrix.config.name }}
-    # Skip if: binary_mode is 'skip' OR release_mode is 'skip' (no need to build if not releasing)
-    # Commit message tags also control skipping (only for push/pull_request events)
-    if: >-
-      (github.event_name == 'workflow_dispatch' && inputs.binary_mode != 'skip' && inputs.release_mode != 'skip') ||
-      (github.event_name != 'workflow_dispatch' &&
-        !contains(github.event.head_commit.message, '[skip-binaries]') &&
-        !contains(github.event.head_commit.message, '[skip-build]') &&
-        !contains(github.event.head_commit.message, '[skip-release]'))
+    # Note: We don't use job-level 'if' here because it prevents matrix expansion
+    # All skip logic is handled in the check-platform step
     needs:
       - build
     runs-on: ${{ matrix.config.os }}
@@ -128,7 +122,32 @@ jobs:
         id: check-platform
         shell: bash
         run: |
-          # Get build platforms and trim whitespace
+          # First check if entire job should be skipped based on inputs/commit message
+          SHOULD_SKIP_JOB="false"
+
+          # For workflow_dispatch: check binary_mode and release_mode
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            if [ "${{ inputs.binary_mode }}" = "skip" ] || [ "${{ inputs.release_mode }}" = "skip" ]; then
+              SHOULD_SKIP_JOB="true"
+              echo "Skipping: binary_mode or release_mode is 'skip'"
+            fi
+          else
+            # For push/pull_request: check commit message tags
+            COMMIT_MSG="${{ github.event.head_commit.message }}"
+            if [[ "$COMMIT_MSG" == *"[skip-binaries]"* ]] || \
+               [[ "$COMMIT_MSG" == *"[skip-build]"* ]] || \
+               [[ "$COMMIT_MSG" == *"[skip-release]"* ]]; then
+              SHOULD_SKIP_JOB="true"
+              echo "Skipping: commit message contains skip tag"
+            fi
+          fi
+
+          if [ "$SHOULD_SKIP_JOB" = "true" ]; then
+            echo "should_build=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Now check platform selection
           BUILD_PLATFORMS="${{ inputs.build_platforms || 'all' }}"
           BUILD_PLATFORMS=$(echo "$BUILD_PLATFORMS" | tr -d ' ')
           ARTIFACT="${{ matrix.config.artifact }}"
@@ -486,11 +505,12 @@ jobs:
   resolve-next-release:
     name: Resolve next release
     # Skip if release_mode is 'skip' or binary_mode is 'skip'
-    if: >-
-      (github.event_name == 'workflow_dispatch' && inputs.binary_mode != 'skip' && inputs.release_mode != 'skip') ||
-      (github.event_name != 'workflow_dispatch' &&
-        !contains(github.event.head_commit.message, '[skip-binaries]') &&
-        !contains(github.event.head_commit.message, '[skip-build]'))
+    if: |-
+      (github.event_name != 'workflow_dispatch' || (inputs.binary_mode != 'skip' && inputs.release_mode != 'skip')) &&
+      (github.event_name == 'workflow_dispatch' || (
+        !contains(github.event.head_commit.message || '', '[skip-binaries]') &&
+        !contains(github.event.head_commit.message || '', '[skip-build]')
+      ))
     runs-on: ubuntu-latest
     needs:
       - build
@@ -656,11 +676,12 @@ jobs:
   release:
     name: Release
     # Skip if release_mode is 'skip' or binary_mode is 'skip', or no next version
-    if: >-
-      ((github.event_name == 'workflow_dispatch' && inputs.binary_mode != 'skip' && inputs.release_mode != 'skip') ||
-      (github.event_name != 'workflow_dispatch' &&
-        !contains(github.event.head_commit.message, '[skip-binaries]') &&
-        !contains(github.event.head_commit.message, '[skip-build]'))) &&
+    if: |-
+      (github.event_name != 'workflow_dispatch' || (inputs.binary_mode != 'skip' && inputs.release_mode != 'skip')) &&
+      (github.event_name == 'workflow_dispatch' || (
+        !contains(github.event.head_commit.message || '', '[skip-binaries]') &&
+        !contains(github.event.head_commit.message || '', '[skip-build]')
+      )) &&
       needs.resolve-next-release.outputs.next-version != '' &&
       needs.resolve-next-release.outputs.next-version != 'false'
     runs-on: ubuntu-latest
