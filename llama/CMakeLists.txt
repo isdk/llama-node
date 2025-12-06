@@ -49,7 +49,7 @@ if (MINGW)
     set(BUILD_SHARED_LIBS ON)
 endif()
 
-if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
+if ((CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang") AND NOT MSVC)
     add_compile_options(-Wno-c++17-extensions)
 endif()
 
