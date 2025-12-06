@@ -314,10 +314,12 @@ ef75a89fdb39ba33a6896ba314026e1b6826caba
 **Default Compiler**:
 The project defaults to using `clang` for all platforms. This ensures consistent build behavior across different operating systems.
 
-**Windows CUDA Host Compiler**:
-When building for CUDA on Windows with `clang` (LLVM) enabled:
-- The build system automatically sets `CMAKE_CUDA_HOST_COMPILER` to `clang++` (or the value of `CMAKE_CXX_COMPILER`).
-- This prevents `nvcc` from defaulting to MSVC (`cl.exe`) as the host compiler, ensuring that the entire build pipeline uses the Clang toolchain.
+**Windows CUDA Compiler**:
+NVCC on Windows has a hard dependency on MSVC's `cl.exe`. Therefore, for Windows CUDA builds:
+- C/C++ code (including NAPI bindings) uses the specified compiler (defaulting to Clang).
+- CUDA `.cu` files use MSVC (`cl.exe`) as the host compiler via `CMAKE_CUDA_HOST_COMPILER=cl`.
+- **Requirement**: Windows CUDA builds require both Clang (or the specified compiler) and MSVC to be installed.
+- **CI Note**: The GitHub Actions workflow uses `ilammy/msvc-dev-cmd@v1` to set up the MSVC environment and ensure `cl.exe` is in PATH.
 
 **CI Build Folder Naming**:
 In CI mode (`--ciMode`):

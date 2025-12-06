@@ -42,12 +42,20 @@ async function main() {
     missingTools.push("clang");
   }
 
-  // 4. Check OpenMP (Platform specific check is hard without compiling,
+  // 4. Check MSVC on Windows (required for CUDA builds)
+  if (platform === "win32") {
+    if (!(await checkCommand("cl"))) {
+      console.log(chalk.yellow("  ⚠ MSVC (cl.exe) not found - required for Windows CUDA builds"));
+      console.log(chalk.yellow("    Install Visual Studio Build Tools or run from Developer Command Prompt"));
+    }
+  }
+
+  // 5. Check OpenMP (Platform specific check is hard without compiling,
   //    but we can check for libraries or dev packages)
   //    For now, we assume if we install clang/gcc via our script, we include openmp.
   //    We will add 'openmp' to missingTools if we are in install mode and want to ensure it.
 
-  // 5. Cross-compilation tools (Linux only)
+  // 6. Cross-compilation tools (Linux only)
   if (platform === "linux") {
     if (!(await checkCommand("aarch64-linux-gnu-g++"))) {
       missingTools.push("cross-arm64");
