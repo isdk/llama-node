@@ -50,10 +50,10 @@ async function main() {
   // 5. Cross-compilation tools (Linux only)
   if (platform === "linux") {
     if (!(await checkCommand("aarch64-linux-gnu-g++"))) {
-      // missingTools.push("cross-arm64"); // Optional, maybe user doesn't want cross-compile
+      missingTools.push("cross-arm64");
     }
     if (!(await checkCommand("arm-linux-gnueabihf-g++"))) {
-      // missingTools.push("cross-armv7");
+      missingTools.push("cross-armv7");
     }
   }
 
@@ -139,12 +139,24 @@ async function installLinuxTools(tools: string[]) {
     // Always ensure OpenMP and build essentials
     packages.push("libomp-dev", "build-essential");
 
+    // Cross compilation tools
+    if (tools.includes("cross-arm64")) packages.push("gcc-aarch64-linux-gnu", "g++-aarch64-linux-gnu");
+    if (tools.includes("cross-armv7")) packages.push("gcc-arm-linux-gnueabihf", "g++-arm-linux-gnueabihf");
+
     // CMake often needs a newer version than apt provides, but for simplicity:
     if (tools.includes("cmake")) packages.push("cmake");
 
     if (packages.length > 0) {
-      await $`sudo apt-get update`;
-      await $`sudo apt-get install -y ${packages}`;
+      const installCmd = `sudo apt-get install -y ${packages.join(" ")}`;
+      try {
+        await $`sudo apt-get update`;
+        await $`sudo apt-get install -y ${packages}`;
+      } catch (e) {
+        console.error(chalk.red("\n❌ Installation failed."));
+        console.error(chalk.yellow("Please run the following command manually to install the required tools:"));
+        console.log(chalk.bold(`\n${installCmd}\n`));
+        process.exit(1);
+      }
     }
   } else {
     console.error(chalk.red("Only apt-get is supported for auto-install on Linux currently."));

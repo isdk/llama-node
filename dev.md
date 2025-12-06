@@ -309,6 +309,21 @@ ef75a89fdb39ba33a6896ba314026e1b6826caba
     *   **目的**: 兼容旧版显卡驱动。如果用户的驱动不支持 CUDA 13，`llama-node` 会自动尝试加载这个 fallback 版本。
     *   这确保了更广泛的硬件兼容性，而无需强制用户升级驱动。
 
+### Compiler Configuration
+
+**Default Compiler**:
+The project defaults to using `clang` for all platforms. This ensures consistent build behavior across different operating systems.
+
+**Windows CUDA Host Compiler**:
+When building for CUDA on Windows with `clang` (LLVM) enabled:
+- The build system automatically sets `CMAKE_CUDA_HOST_COMPILER` to `clang++` (or the value of `CMAKE_CXX_COMPILER`).
+- This prevents `nvcc` from defaulting to MSVC (`cl.exe`) as the host compiler, ensuring that the entire build pipeline uses the Clang toolchain.
+
+**CI Build Folder Naming**:
+In CI mode (`--ciMode`):
+- Custom CMake options (like `CMAKE_C_COMPILER`) are **excluded** from the binary folder name generation.
+- This ensures predictable paths (e.g., `bins/linux-x64-cuda`) instead of hashed paths (e.g., `bins/linux-x64-cuda-<hash>`), which is critical for the CI workflow to correctly locate and move artifacts.
+
 ### 预编译二进制模块分发系统
 
 项目使用 monorepo 多包分发模式，将预编译的原生二进制文件打包为独立的、平台特定的 npm 包。这种架构让用户只需安装主包，npm 会自动根据当前平台选择并安装合适的预编译包，避免在用户机器上编译，大大提升安装速度。
@@ -666,7 +681,36 @@ pnpm vite-node ./scripts/local-build-prebuilt.ts --compiler gcc
 pnpm vite-node ./scripts/local-build-prebuilt.ts --target linux-x64 --gpu false
 ```
 
-### 3. 生成发布包
+### 3. Linux ARM Cross-Compilation
+
+To cross-compile for ARM64 or ARMv7 on a Linux x64 host:
+
+1.  **Install Cross-Compilation Tools**:
+    Run the setup script to install `gcc-aarch64-linux-gnu`, `gcc-arm-linux-gnueabihf`, etc.
+    ```bash
+    pnpm run local:setup:install
+    ```
+
+2.  **Install Cross-Platform OpenMP**:
+    Since the host's OpenMP library is x64, you need to download the ARM64/ARMv7 version. We provide a helper script for this:
+    ```bash
+    # For ARM64
+    npx tsx scripts/install-cross-openmp.ts arm64
+
+    # For ARMv7
+    npx tsx scripts/install-cross-openmp.ts arm
+    ```
+    This script will temporarily enable the foreign architecture to download the correct `.deb` packages from Ubuntu repositories and extract them to `llama/cross-libs/<arch>`.
+
+3.  **Build with Clang**:
+    Set `CMAKE_PREFIX_PATH` to the installed OpenMP location and run the build.
+    ```bash
+    # Example for ARM64
+    export CMAKE_PREFIX_PATH=$(pwd)/llama/cross-libs/arm64/usr/lib/llvm-14/lib
+    npx tsx scripts/local-build-prebuilt.ts --target linux-arm64 --compiler clang
+    ```
+
+### 4. 生成发布包
 
 编译完成后，将二进制文件打包到 `packages/prebuilt-llama-node/*` 中：
 
