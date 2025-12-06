@@ -105,6 +105,29 @@ export async function compileLlamaCpp(buildOptions: BuildOptions, compileOptions
                 const cmakeCustomOptions = new Map(buildOptions.customCmakeOptions);
                 const cmakeToolchainOptions = new Map<string, string>();
 
+                if (useWindowsLlvm && platform === "win") {
+                    const cCompiler = buildOptions.customCmakeOptions.get("CMAKE_C_COMPILER");
+                    const cxxCompiler = buildOptions.customCmakeOptions.get("CMAKE_CXX_COMPILER");
+
+                    // 如果指定了 clang 相关编译器，则统一使用 clang-cl 模式
+                    if (cCompiler?.includes("clang") || cxxCompiler?.includes("clang")) {
+                        // 自动设置为 clang-cl，除非已经明确指定
+                        if (!buildOptions.customCmakeOptions.has("CMAKE_C_COMPILER")) {
+                            cmakeCustomOptions.set("CMAKE_C_COMPILER", "clang-cl");
+                        }
+                        if (!buildOptions.customCmakeOptions.has("CMAKE_CXX_COMPILER")) {
+                            cmakeCustomOptions.set("CMAKE_CXX_COMPILER", "clang-cl");
+                        }
+
+                        // clang-cl 通常与 lld-link 配合使用
+                        if (!buildOptions.customCmakeOptions.has("CMAKE_LINKER")) {
+                            cmakeCustomOptions.set("CMAKE_LINKER", "lld-link");
+                        }
+
+                        // clang-cl 不支持某些 MSVC 特定功能
+                        // cmakeCustomOptions.set("GGML_OPENMP", "OFF");
+                    }
+                }
                 if (!cmakeCustomOptions.has("GGML_BUILD_NUMBER"))
                     cmakeCustomOptions.set("GGML_BUILD_NUMBER", "1");
 
