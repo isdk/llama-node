@@ -117,23 +117,6 @@ export async function BuildLlamaCppCommand({
     const platformInfo = await getPlatformInfo();
     const customCmakeOptions = resolveCustomCmakeOptions();
 
-    if (compiler === "clang") {
-        if (!customCmakeOptions.has("CMAKE_C_COMPILER"))
-            customCmakeOptions.set("CMAKE_C_COMPILER", "clang");
-        if (!customCmakeOptions.has("CMAKE_CXX_COMPILER"))
-            customCmakeOptions.set("CMAKE_CXX_COMPILER", "clang++");
-    } else if (compiler === "gcc") {
-        if (!customCmakeOptions.has("CMAKE_C_COMPILER"))
-            customCmakeOptions.set("CMAKE_C_COMPILER", "gcc");
-        if (!customCmakeOptions.has("CMAKE_CXX_COMPILER"))
-            customCmakeOptions.set("CMAKE_CXX_COMPILER", "g++");
-    } else if (compiler === "msvc") {
-        if (!customCmakeOptions.has("CMAKE_C_COMPILER"))
-            customCmakeOptions.set("CMAKE_C_COMPILER", "cl");
-        if (!customCmakeOptions.has("CMAKE_CXX_COMPILER"))
-            customCmakeOptions.set("CMAKE_CXX_COMPILER", "cl");
-    }
-
     const buildGpusToTry: BuildGpu[] = await getGpuTypesToUseForOption(gpu, { platform, arch });
     let downloadedCmake = false;
 
@@ -152,6 +135,30 @@ export async function BuildLlamaCppCommand({
         }
 
         const currentCustomCmakeOptions = new Map(customCmakeOptions);
+
+        // Set C/C++ compiler based on user selection
+        if (compiler === "clang") {
+            if (!currentCustomCmakeOptions.has("CMAKE_C_COMPILER"))
+                currentCustomCmakeOptions.set("CMAKE_C_COMPILER", "clang");
+            if (!currentCustomCmakeOptions.has("CMAKE_CXX_COMPILER"))
+                currentCustomCmakeOptions.set("CMAKE_CXX_COMPILER", "clang++");
+        } else if (compiler === "gcc") {
+            if (!currentCustomCmakeOptions.has("CMAKE_C_COMPILER"))
+                currentCustomCmakeOptions.set("CMAKE_C_COMPILER", "gcc");
+            if (!currentCustomCmakeOptions.has("CMAKE_CXX_COMPILER"))
+                currentCustomCmakeOptions.set("CMAKE_CXX_COMPILER", "g++");
+        } else if (compiler === "msvc") {
+            if (!currentCustomCmakeOptions.has("CMAKE_C_COMPILER"))
+                currentCustomCmakeOptions.set("CMAKE_C_COMPILER", "cl");
+            if (!currentCustomCmakeOptions.has("CMAKE_CXX_COMPILER"))
+                currentCustomCmakeOptions.set("CMAKE_CXX_COMPILER", "cl");
+        }
+
+        // NVCC on Windows has a hard dependency on MSVC's cl.exe,
+        // so we force CUDA host compiler to cl.exe while keeping Clang for C/C++
+        if (platform === "win" && gpuToTry === "cuda" && !currentCustomCmakeOptions.has("CMAKE_CUDA_HOST_COMPILER")) {
+            currentCustomCmakeOptions.set("CMAKE_CUDA_HOST_COMPILER", "cl");
+        }
 
         const buildOptions: BuildOptions = {
             customCmakeOptions: currentCustomCmakeOptions,

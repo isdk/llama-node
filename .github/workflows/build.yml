@@ -175,6 +175,12 @@ jobs:
           choco install ninja
           choco install llvm
 
+      - name: Setup MSVC for Windows CUDA
+        if: startsWith(matrix.config.os, 'windows') && steps.cache-binaries.outputs.cache-hit != 'true'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
       - name: Install dependencies on Ubuntu (1)
         if: matrix.config.name == 'Ubuntu (1)' && steps.cache-binaries.outputs.cache-hit != 'true'
         run: |

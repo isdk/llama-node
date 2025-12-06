@@ -131,14 +131,6 @@ export async function compileLlamaCpp(buildOptions: BuildOptions, compileOptions
                 if (buildOptions.gpu === "cuda" && !cmakeCustomOptions.has("GGML_CUDA"))
                     cmakeCustomOptions.set("GGML_CUDA", "1");
 
-                if (buildOptions.gpu === "cuda" && platform === "win" && useWindowsLlvm && !cmakeCustomOptions.has("CMAKE_CUDA_HOST_COMPILER")) {
-                    const cxxCompiler = cmakeCustomOptions.get("CMAKE_CXX_COMPILER");
-                    if (cxxCompiler)
-                        cmakeCustomOptions.set("CMAKE_CUDA_HOST_COMPILER", cxxCompiler);
-                    else
-                        cmakeCustomOptions.set("CMAKE_CUDA_HOST_COMPILER", "clang++");
-                }
-
                 if (buildOptions.gpu === "vulkan" && !cmakeCustomOptions.has("GGML_VULKAN"))
                     cmakeCustomOptions.set("GGML_VULKAN", "1");
 
