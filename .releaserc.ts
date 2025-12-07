@@ -60,6 +60,7 @@ const config: Omit<GlobalConfig, "repositoryUrl" | "tagFormat"> = {
                 { type: "docs", scope: "README", release: "patch" },
                 { type: "docs", breaking: true, release: "minor" },
                 { scope: "ci", release: false },
+                { scope: "test", release: false },
                 { scope: "build", release: "patch" },
             ]
         }],
