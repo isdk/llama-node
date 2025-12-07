@@ -156,7 +156,9 @@ export async function BuildLlamaCppCommand({
 
         // NVCC on Windows has a hard dependency on MSVC's cl.exe,
         // so we force CUDA host compiler to cl.exe while keeping Clang for C/C++
-        if (platform === "win" && gpuToTry === "cuda" && !currentCustomCmakeOptions.has("CMAKE_CUDA_HOST_COMPILER")) {
+        if (platform === "win" && gpuToTry === "cuda") {
+            currentCustomCmakeOptions.set("CMAKE_CXX_COMPILER", "cl");
+            currentCustomCmakeOptions.set("CMAKE_C_COMPILER", "cl");
             currentCustomCmakeOptions.set("CMAKE_CUDA_HOST_COMPILER", "cl");
         }
 

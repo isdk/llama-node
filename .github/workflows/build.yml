@@ -247,13 +247,6 @@ jobs:
           choco install cmake.install --version=3.31.1
           choco install cmake --version=3.31.1
           choco install ninja
-          choco install llvm
-
-      - name: Setup MSVC for Windows CUDA
-        if: steps.check-platform.outputs.should_build == 'true' && startsWith(matrix.config.os, 'windows') && steps.cache-binaries.outputs.cache-hit != 'true'
-        uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: x64
 
       - name: Install dependencies on Ubuntu (1)
         if: steps.check-platform.outputs.should_build == 'true' && matrix.config.name == 'Ubuntu (1)' && steps.cache-binaries.outputs.cache-hit != 'true'
