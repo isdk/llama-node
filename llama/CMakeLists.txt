@@ -73,6 +73,31 @@ else()
     endif()
 endif()
 
+include("./cmake/FindOpenMPFixed.cmake")
+find_package(OpenMPFixed QUIET)
+
+if(OpenMPFixed_FOUND)
+    message(STATUS "OpenMP found with custom finder")
+    set(OPENMP_FOUND TRUE)
+else()
+    # Fallback to system finder
+    find_package(OpenMP QUIET)
+endif()
+
+# Handle compiler-specific options
+if(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    # Clang-specific options
+    if(APPLE)
+        if(OpenMP_FOUND)
+            set(CLANG_OPENMP_OPTIONS "-Xpreprocessor -fopenmp")
+        endif()
+    endif()
+endif()
+
+# Configure llama.cpp build options
+option(LLAMA_OPENMP "Enable OpenMP support" ${OPENMP_FOUND})
+option(GGML_OPENMP "Enable OpenMP support in GGML" ${OPENMP_FOUND})
+
 execute_process(COMMAND node -p "require('node-addon-api').include.slice(1,-1)"
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     OUTPUT_VARIABLE NODE_ADDON_API_DIR
