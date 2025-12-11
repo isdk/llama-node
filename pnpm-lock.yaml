@@ -24,7 +24,7 @@ importers:
         specifier: ^1.0.2
         version: 1.0.2
       cmake-js:
-        specifier: ^7.3.1
+        specifier: ^7.4.0
         version: 7.4.0
       cross-spawn:
         specifier: ^7.0.6
@@ -242,44 +242,44 @@ importers:
         version: 8.8.5
     optionalDependencies:
       '@isdk/llama-node-linux-arm64':
-        specifier: 0.1.0
-        version: link:packages/prebuilt-llama-node/linux-arm64
+        specifier: 2.0.2
+        version: 2.0.2
       '@isdk/llama-node-linux-armv7l':
-        specifier: 0.1.0
-        version: link:packages/prebuilt-llama-node/linux-armv7l
+        specifier: 2.0.2
+        version: 2.0.2
       '@isdk/llama-node-linux-x64':
-        specifier: 0.1.0
-        version: link:packages/prebuilt-llama-node/linux-x64
+        specifier: 2.0.2
+        version: 2.0.2
       '@isdk/llama-node-linux-x64-cuda':
-        specifier: 0.1.0
-        version: link:packages/prebuilt-llama-node/linux-x64-cuda
+        specifier: 2.0.2
+        version: 2.0.2
       '@isdk/llama-node-linux-x64-cuda-ext':
-        specifier: 0.1.0
-        version: link:packages/prebuilt-llama-node/linux-x64-cuda-ext
+        specifier: 2.0.2
+        version: 2.0.2
       '@isdk/llama-node-linux-x64-vulkan':
-        specifier: 0.1.0
-        version: link:packages/prebuilt-llama-node/linux-x64-vulkan
+        specifier: 2.0.2
+        version: 2.0.2
       '@isdk/llama-node-mac-arm64-metal':
-        specifier: 0.1.0
-        version: link:packages/prebuilt-llama-node/mac-arm64-metal
+        specifier: 2.0.2
+        version: 2.0.2
       '@isdk/llama-node-mac-x64':
-        specifier: 0.1.0
-        version: link:packages/prebuilt-llama-node/mac-x64
+        specifier: 2.0.2
+        version: 2.0.2
       '@isdk/llama-node-win-arm64':
-        specifier: 0.1.0
-        version: link:packages/prebuilt-llama-node/win-arm64
+        specifier: 2.0.2
+        version: 2.0.2
       '@isdk/llama-node-win-x64':
-        specifier: 0.1.0
-        version: link:packages/prebuilt-llama-node/win-x64
+        specifier: 2.0.2
+        version: 2.0.2
       '@isdk/llama-node-win-x64-cuda':
-        specifier: 0.1.0
-        version: link:packages/prebuilt-llama-node/win-x64-cuda
+        specifier: 2.0.2
+        version: 2.0.2
       '@isdk/llama-node-win-x64-cuda-ext':
-        specifier: 0.1.0
-        version: link:packages/prebuilt-llama-node/win-x64-cuda-ext
+        specifier: 2.0.2
+        version: 2.0.2
       '@isdk/llama-node-win-x64-vulkan':
-        specifier: 0.1.0
-        version: link:packages/prebuilt-llama-node/win-x64-vulkan
+        specifier: 2.0.2
+        version: 2.0.2
 
   packages/prebuilt-llama-node/linux-arm64:
     devDependencies:
@@ -1128,6 +1128,84 @@ packages:
   '@isaacs/cliui@8.0.2':
     resolution: {integrity: sha512-O8jcjabXaleOG9DQ0+ARXWZBTfnP4WNAqzuiJK7ll44AmxGKv/J2M4TPjxjY3znBCfvBXFzucm1twdyFybFqEA==}
     engines: {node: '>=12'}
+
+  '@isdk/llama-node-linux-arm64@2.0.2':
+    resolution: {integrity: sha512-meyYFSMx4WhLwlt5X2W/glx3ERwF1wA139VRuudoEGcH+ys/RLB28p84pRPeFpjtW3patSg+uLM3/FSTNVQW3A==}
+    engines: {node: '>=20.0.0'}
+    cpu: [arm64, x64]
+    os: [linux]
+
+  '@isdk/llama-node-linux-armv7l@2.0.2':
+    resolution: {integrity: sha512-5VDv3Y0uZXAdNgiBQawiWbHg1hBSBHqT24M7zcOMKecE81JQZKYTZ1tY8KkIfwklKAJ7+wsnFJ3vUPymMSY0Jw==}
+    engines: {node: '>=20.0.0'}
+    cpu: [arm, x64]
+    os: [linux]
+
+  '@isdk/llama-node-linux-x64-cuda-ext@2.0.2':
+    resolution: {integrity: sha512-ZR5PuKpyvDBIwv3VVocAjqkYPgVU3MZ7VmoPbitBk4pMxT5ko2pBVrkE78i4ePH/+8usaNXrFSXSliFdQ27Jpg==}
+    engines: {node: '>=20.0.0'}
+    cpu: [x64]
+    os: [linux]
+
+  '@isdk/llama-node-linux-x64-cuda@2.0.2':
+    resolution: {integrity: sha512-sgKhOpl1/btrtwMG7ZupaxgEn9oXklrys9Mp/Lpdcyeo247jkcHrObjff27s54O3WKQKOYo8ynCaXSH830OsGQ==}
+    engines: {node: '>=20.0.0'}
+    cpu: [x64]
+    os: [linux]
+
+  '@isdk/llama-node-linux-x64-vulkan@2.0.2':
+    resolution: {integrity: sha512-XTDnE1rH7M0CrqoyktfLTTp5uoAekJsisXJBEustNjsAvO0H/CgGL+OKpFll4fSUUAILZhNVIoAlpDRCDLfhWA==}
+    engines: {node: '>=20.0.0'}
+    cpu: [x64]
+    os: [linux]
+
+  '@isdk/llama-node-linux-x64@2.0.2':
+    resolution: {integrity: sha512-VKEgqLnqnKOqI+Do7Dgc/9pjFfeepGVRo/0HVIFVU3eH+CYOaQBFdN3xamkdk/qfbVqui2oXC4zcDqRjdhybaA==}
+    engines: {node: '>=20.0.0'}
+    cpu: [x64]
+    os: [linux]
+
+  '@isdk/llama-node-mac-arm64-metal@2.0.2':
+    resolution: {integrity: sha512-XNV0Dz2pMhXG8i2B/AHmYDGDRRtOhWTDiYZ7aTpWWZkgmeAarsOSOuB7H9dMFHgb2D3LoiNWt4hZD+LozmDFyA==}
+    engines: {node: '>=20.0.0'}
+    cpu: [arm64, x64]
+    os: [darwin]
+
+  '@isdk/llama-node-mac-x64@2.0.2':
+    resolution: {integrity: sha512-+GWjq73mtNCwaB0oqarQWIR3X8HgjXWoOO9uV4sGVfe9oRzKrbjuzAYmha3btkJC348Bs94lWa9hkgQqdXRf5w==}
+    engines: {node: '>=20.0.0'}
+    cpu: [x64]
+    os: [darwin]
+
+  '@isdk/llama-node-win-arm64@2.0.2':
+    resolution: {integrity: sha512-FaC/mSTlOJf5ctSSyKvlpacBGhkF5H1TfdXupVRWgU9Ig4yyEy/WqXrDS7mwdcwx0gxSRdBa34xsRNq+7OAEXg==}
+    engines: {node: '>=20.0.0'}
+    cpu: [arm64, x64]
+    os: [win32]
+
+  '@isdk/llama-node-win-x64-cuda-ext@2.0.2':
+    resolution: {integrity: sha512-3gIWjgeH3Qj4sNR4JHy8OrxlAa7A7Qs0vwNvVAYjNoYgRR6t4He5c1UrAHU/6qTAmEW9izfCzpbvi2NMySRO3A==}
+    engines: {node: '>=20.0.0'}
+    cpu: [x64]
+    os: [win32]
+
+  '@isdk/llama-node-win-x64-cuda@2.0.2':
+    resolution: {integrity: sha512-YsevIGd7AuimgfMQDXTY9mfZ/MbAqJuD2kc0nXPV4bZcKSSKyRnBcqxzfDU1dWPHlU1BwbMLFGfh64ZDGaFu8A==}
+    engines: {node: '>=20.0.0'}
+    cpu: [x64]
+    os: [win32]
+
+  '@isdk/llama-node-win-x64-vulkan@2.0.2':
+    resolution: {integrity: sha512-A6TIL5/pQ+nbMtzHvO0ifsaSRgDwCmt4JKb7OQs6megGPnIk5rEQGX/sSgk/ohVUmVv1xiqgs51KeQNAL6zgAA==}
+    engines: {node: '>=20.0.0'}
+    cpu: [x64]
+    os: [win32]
+
+  '@isdk/llama-node-win-x64@2.0.2':
+    resolution: {integrity: sha512-KvogNg8VpcBduCUP/l8p/LJDkBFUvktmV9HATPHgbrwITl9+p/QJHix85NXmsyiFEvSBpx2hHvJtxX+8zWQxvA==}
+    engines: {node: '>=20.0.0'}
+    cpu: [x64]
+    os: [win32]
 
   '@istanbuljs/schema@0.1.3':
     resolution: {integrity: sha512-ZXRY4jNvVgSVQ8DL3LTcakaAtXwTVUxE81hslsyD2AtoXW/wVob10HkOJ1X/pAlcI7D+2YoZKg5do8G/w6RYgA==}
@@ -6239,6 +6317,45 @@ snapshots:
       strip-ansi-cjs: strip-ansi@6.0.1
       wrap-ansi: 8.1.0
       wrap-ansi-cjs: wrap-ansi@7.0.0
+
+  '@isdk/llama-node-linux-arm64@2.0.2':
+    optional: true
+
+  '@isdk/llama-node-linux-armv7l@2.0.2':
+    optional: true
+
+  '@isdk/llama-node-linux-x64-cuda-ext@2.0.2':
+    optional: true
+
+  '@isdk/llama-node-linux-x64-cuda@2.0.2':
+    optional: true
+
+  '@isdk/llama-node-linux-x64-vulkan@2.0.2':
+    optional: true
+
+  '@isdk/llama-node-linux-x64@2.0.2':
+    optional: true
+
+  '@isdk/llama-node-mac-arm64-metal@2.0.2':
+    optional: true
+
+  '@isdk/llama-node-mac-x64@2.0.2':
+    optional: true
+
+  '@isdk/llama-node-win-arm64@2.0.2':
+    optional: true
+
+  '@isdk/llama-node-win-x64-cuda-ext@2.0.2':
+    optional: true
+
+  '@isdk/llama-node-win-x64-cuda@2.0.2':
+    optional: true
+
+  '@isdk/llama-node-win-x64-vulkan@2.0.2':
+    optional: true
+
+  '@isdk/llama-node-win-x64@2.0.2':
+    optional: true
 
   '@istanbuljs/schema@0.1.3': {}
 

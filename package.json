@@ -1,6 +1,6 @@
 {
   "name": "@isdk/llama-node",
-  "version": "0.1.0",
+  "version": "2.0.2",
   "description": "Low-level Node.js bindings for llama.cpp. Core library for running LLM models locally with native performance and hardware acceleration support.",
   "homepage": "https://github.com/isdk/llama-node",
   "main": "./dist/index.js",
@@ -188,7 +188,7 @@
     "bytes": "^3.1.2",
     "chalk": "^5.4.1",
     "chmodrp": "^1.0.2",
-    "cmake-js": "^7.3.1",
+    "cmake-js": "^7.4.0",
     "cross-spawn": "^7.0.6",
     "env-var": "^7.5.0",
     "filenamify": "^6.0.0",
@@ -222,18 +222,18 @@
     }
   },
   "optionalDependencies": {
-    "@isdk/llama-node-linux-arm64": "0.1.0",
-    "@isdk/llama-node-linux-armv7l": "0.1.0",
-    "@isdk/llama-node-linux-x64": "0.1.0",
-    "@isdk/llama-node-linux-x64-cuda": "0.1.0",
-    "@isdk/llama-node-linux-x64-cuda-ext": "0.1.0",
-    "@isdk/llama-node-linux-x64-vulkan": "0.1.0",
-    "@isdk/llama-node-mac-arm64-metal": "0.1.0",
-    "@isdk/llama-node-mac-x64": "0.1.0",
-    "@isdk/llama-node-win-arm64": "0.1.0",
-    "@isdk/llama-node-win-x64": "0.1.0",
-    "@isdk/llama-node-win-x64-cuda": "0.1.0",
-    "@isdk/llama-node-win-x64-cuda-ext": "0.1.0",
-    "@isdk/llama-node-win-x64-vulkan": "0.1.0"
+    "@isdk/llama-node-linux-arm64": "2.0.2",
+    "@isdk/llama-node-linux-armv7l": "2.0.2",
+    "@isdk/llama-node-linux-x64": "2.0.2",
+    "@isdk/llama-node-linux-x64-cuda": "2.0.2",
+    "@isdk/llama-node-linux-x64-cuda-ext": "2.0.2",
+    "@isdk/llama-node-linux-x64-vulkan": "2.0.2",
+    "@isdk/llama-node-mac-arm64-metal": "2.0.2",
+    "@isdk/llama-node-mac-x64": "2.0.2",
+    "@isdk/llama-node-win-arm64": "2.0.2",
+    "@isdk/llama-node-win-x64": "2.0.2",
+    "@isdk/llama-node-win-x64-cuda": "2.0.2",
+    "@isdk/llama-node-win-x64-cuda-ext": "2.0.2",
+    "@isdk/llama-node-win-x64-vulkan": "2.0.2"
   }
 }
