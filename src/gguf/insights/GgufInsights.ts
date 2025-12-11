@@ -5,6 +5,7 @@ import {GgufFileInfo} from "../types/GgufFileInfoTypes.js";
 import {GgufTensorInfo} from "../types/GgufTensorInfoTypes.js";
 import {GgufArchitectureType} from "../types/GgufMetadataTypes.js";
 import {getReadablePath} from "../../cli/utils/getReadablePath.js";
+import {padSafeContextSize} from "../../evaluator/LlamaContext/utils/padSafeContextSize.js";
 import {GgufInsightsConfigurationResolver} from "./GgufInsightsConfigurationResolver.js";
 import {GgufInsightsTokens} from "./GgufInsightsTokens.js";
 
@@ -211,6 +212,7 @@ export class GgufInsights {
         const llmData = this._ggufFileInfo.architectureMetadata;
         const tensorInfo = this._ggufFileInfo.fullTensorInfo ?? [];
         const slidingWindow = this.swaSize ?? 0;
+        const kvUnified = false;
         const usingSWA = !swaFullCache && slidingWindow > 0 && slidingWindow < contextSize &&
             (this.trainContextSize == null || slidingWindow < this.trainContextSize);
         const swaPattern = getSwaPatternForArchitecture(this._ggufFileInfo.metadata?.general?.architecture);
@@ -219,10 +221,10 @@ export class GgufInsights {
             : (1 / (swaPattern + (flashAttention ? -0.5 : -1)));
 
         // source: `llama_kv_cache_unified::get_padding` in `llama-kv-cache.cpp`
-        const kvCachePadding = flashAttention
-            ? 256
-            : 32;
-        const actualContextSize = sequences * contextSize;
+        const kvCachePadding = 1;
+        const actualContextSize = kvUnified
+            ? padSafeContextSize(sequences * contextSize, "up")
+            : sequences * padSafeContextSize(contextSize, "up");
         const kvSize = usingSWA
             ? (
                 (1 - nonSwaPercent) * Math.min(actualContextSize, ggmlPad(sequences * slidingWindow + batchSize, kvCachePadding)) +
@@ -380,8 +382,24 @@ export class GgufInsights {
         const cpuKVCacheSize = this._estimateKvMemorySizeInBytes(kvSize, finalCpuLayers);
 
         // source: `llama_context::graph_max_nodes` in `llama-context.cpp`
-        const maxNodes = Math.max(65536, 5 * tensorInfo.length);
-        const cpuNodes = 5 * (tensorInfo.length * (finalCpuLayers / totalFileLayers));
+        const getMaxNodesMultiplier = (arch: GgufArchitectureType | undefined, nTokens: number): {min: number, multiplier: number} => {
+            if (arch === GgufArchitectureType.qwen3next)
+                return {
+                    min: nTokens * 40,
+                    multiplier: 32
+                };
+
+            return {
+                min: 1024,
+                multiplier: 8
+            };
+        };
+        const maxNodesMultiplier = getMaxNodesMultiplier(
+            this._ggufFileInfo.metadata?.general?.architecture,
+            Math.min(actualContextSize, batchSize)
+        );
+        const maxNodes = Math.max(maxNodesMultiplier.min, maxNodesMultiplier.multiplier * tensorInfo.length);
+        const cpuNodes = maxNodesMultiplier.multiplier * (tensorInfo.length * (finalCpuLayers / totalFileLayers));
         const gpuNodes = maxNodes - cpuNodes;
 
         const gpuComputeBufferSize = (this._llama._consts.ggmlTensorOverhead * gpuNodes) +

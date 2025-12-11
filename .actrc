@@ -1,0 +1,21 @@
+# act configuration file
+# Use medium size images for better compatibility
+-P ubuntu-latest=catthehacker/ubuntu:act-latest
+-P ubuntu-22.04=catthehacker/ubuntu:act-22.04
+-P macos-latest=catthehacker/ubuntu:act-latest
+-P macos-13=catthehacker/ubuntu:act-latest
+-P macos-14=catthehacker/ubuntu:act-latest
+-P windows-latest=catthehacker/ubuntu:act-latest
+-P windows-2022=catthehacker/ubuntu:act-latest
+
+# Use secrets from .secrets file
+--secret-file .secrets
+
+# Use environment variables from .env file if it exists
+--env-file .env.act
+
+# Verbose output
+#--verbose
+
+# Allow access to host services (like proxy)
+--container-options "--add-host=host.docker.internal:host-gateway"

@@ -1,0 +1,86 @@
+name: Act Local Build (for testing with act)
+on:
+  workflow_dispatch:
+
+jobs:
+  build-local:
+    name: Build for Local Testing
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+
+      - name: Install modules
+        run: pnpm install
+
+      - name: Build
+        run: pnpm run build
+
+      - name: Download latest llama.cpp release
+        env:
+          CI: true
+        run: node ./dist/cli/cli.js source download --release latest --skipBuild --noBundle --noUsageExample --updateBinariesReleaseMetadataAndSaveGitBundle
+
+      # Skip artifact upload - when using -b flag, files are already on host
+      - name: Build info
+        run: |
+          echo "✅ Build completed successfully"
+          echo "📂 Artifacts are available in your local directory:"
+          echo "   - dist/"
+          echo "   - llama/"
+          ls -la dist/ | head -20
+          ls -la llama/ | head -20
+
+  build-binaries-local:
+    name: Build binaries (Linux only)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+
+      - name: Install dependencies on Ubuntu
+        run: |
+          sudo bash .github/scripts/setup-apt-mirror.sh || true
+          sudo apt-get update
+          sudo apt-get install ninja-build libtbb-dev cmake
+
+      - name: Build project (reuse local dist if using -b)
+        run: |
+          if [ ! -d "dist" ]; then
+            pnpm install
+            pnpm run build
+            node ./dist/cli/cli.js source download --release latest --skipBuild --noBundle --noUsageExample
+          fi
+
+      - name: Build Binaries (x64 only)
+        run: |
+          pnpm install
+          node ./dist/cli/cli.js source build --ciMode --noUsageExample
+
+      - name: Organize binaries
+        run: |
+          mkdir -p bins
+          if [ -d "llama/localBuilds" ]; then
+              for dir in llama/localBuilds/*; do
+                  if [ -d "$dir/Release" ]; then
+                      target_name=$(basename "$dir")
+                      echo "Moving $target_name to bins/..."
+                      rm -rf "bins/$target_name"
+                      mv "$dir/Release" "bins/$target_name"
+                  fi
+              done
+          fi
+          echo "✅ Built binaries:"
+          ls -la bins/
