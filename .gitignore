@@ -41,6 +41,8 @@ node_modules
 /llama/xpack/xpacks
 /llama/xpack/cmakeInstall.lock
 /bins
+dev.md
+docs/archived
 
 # act (GitHub Actions local runner) configuration
 .secrets
