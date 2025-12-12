@@ -632,7 +632,7 @@ jobs:
     # Run if test_mode is 'all' or 'model_dependent'
     if: |
       github.event_name != 'workflow_dispatch' || (inputs.test_mode == 'all' || inputs.test_mode == 'model_dependent')
-    runs-on: macos-13
+    runs-on: macos-26
     env:
       NODE_LLAMA_CPP_GPU: false
     needs:
