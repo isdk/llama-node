@@ -109,7 +109,7 @@ describe("stableCode", () => {
                     if (logProgresses.length === 0 || loadPercentage - logProgresses.at(-1)! >= 0.1 || loadPercentage === 1)
                         logProgresses.push(loadPercentage);
 
-                    if (loadPercentage >= 0.01 && !loadController.signal.aborted) {
+                    if (!loadController.signal.aborted) {
                         loadController.abort(new CustomError());
                         abortTime = Date.now();
                     } else if (loadController.signal.aborted)
