@@ -192,6 +192,11 @@ jobs:
           node-version: "20"
           cache: "pnpm"
 
+      - name: Ensure pnpm store path exists for caching
+        if: steps.check-platform.outputs.should_build == 'true'
+        shell: bash
+        run: mkdir -p "$(pnpm store path)"
+
       - name: Download build artifact
         if: steps.check-platform.outputs.should_build == 'true'
         uses: actions/download-artifact@v4

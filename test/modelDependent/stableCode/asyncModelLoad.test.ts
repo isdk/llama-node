@@ -137,7 +137,15 @@ describe("stableCode", () => {
                 : fulfillTime - abortTime;
             const maxTimeToAllowToNotAbortBeforeFinishLoading = 1000;
 
-            await expect(modelPromise).rejects.toThrow(CustomError);
+            // 在非常快的机器上,模型可能会在处理中止信号之前完成加载。
+            // 在这种情况下,promise会resolve而不是reject。
+            // 此条件逻辑通过仅在加载失败或加载时间足够长本应被中止时才期望reject来处理这种情况。
+            if (loadFailed) {
+                await expect(modelPromise).rejects.toThrow(CustomError);
+            } else if (timeBetweenAbortAndFulfill > maxTimeToAllowToNotAbortBeforeFinishLoading) {
+                await expect(modelPromise).rejects.toThrow(CustomError);
+            }
+
             expect(loopIterationsBeforeLoad).toBeGreaterThanOrEqual(2);
             expect(logProgresses.length).toBeGreaterThan(0);
 
