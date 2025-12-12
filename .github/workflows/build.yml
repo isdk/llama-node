@@ -241,15 +241,33 @@ jobs:
           path: bins
           key: prebuilt-binaries-${{ matrix.config.artifact }}-${{ steps.llama-cpp-version.outputs.version }}-${{ hashFiles('llama/addon/**', 'llama/CMakeLists.txt') }}
 
+      - name: Determine if build is required
+        id: determine-build
+        if: steps.check-platform.outputs.should_build == 'true'
+        shell: bash
+        run: |
+          if [[ "${{ steps.cache-binaries.outputs.cache-hit }}" == 'true' ]]; then
+            if [[ -d "bins" && -n "$(ls -A bins)" ]]; then
+              echo "Cache hit and 'bins' is not empty. Build not required."
+              echo "build_required=false" >> $GITHUB_OUTPUT
+            else
+              echo "Cache hit, but 'bins' directory is empty or missing. Build is required."
+              echo "build_required=true" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "Cache not hit or rebuild is forced. Build is required."
+            echo "build_required=true" >> $GITHUB_OUTPUT
+          fi
+
       - name: Install dependencies on Windows
-        if: steps.check-platform.outputs.should_build == 'true' && startsWith(matrix.config.os, 'windows') && steps.cache-binaries.outputs.cache-hit != 'true'
+        if: steps.check-platform.outputs.should_build == 'true' && startsWith(matrix.config.os, 'windows') && steps.determine-build.outputs.build_required == 'true'
         run: |
           choco install cmake.install --version=3.31.1
           choco install cmake --version=3.31.1
           choco install ninja
 
       - name: Install dependencies on Ubuntu (1)
-        if: steps.check-platform.outputs.should_build == 'true' && matrix.config.name == 'Ubuntu (1)' && steps.cache-binaries.outputs.cache-hit != 'true'
+        if: steps.check-platform.outputs.should_build == 'true' && matrix.config.name == 'Ubuntu (1)' && steps.determine-build.outputs.build_required == 'true'
         run: |
           sudo bash .github/scripts/setup-apt-mirror.sh || true
           sudo apt-get update
@@ -268,7 +286,7 @@ jobs:
           cmake --version
 
       - name: Install dependencies on Ubuntu (2)
-        if: steps.check-platform.outputs.should_build == 'true' && matrix.config.name == 'Ubuntu (2)' && steps.cache-binaries.outputs.cache-hit != 'true'
+        if: steps.check-platform.outputs.should_build == 'true' && matrix.config.name == 'Ubuntu (2)' && steps.determine-build.outputs.build_required == 'true'
         run: |
           sudo bash .github/scripts/setup-apt-mirror.sh || true
           sudo apt-get update
@@ -281,7 +299,7 @@ jobs:
           cmake --version
 
       - name: Install Cuda 13.0 on Windows (1)
-        if: steps.check-platform.outputs.should_build == 'true' && matrix.config.name == 'Windows (1)' && steps.cache-binaries.outputs.cache-hit != 'true'
+        if: steps.check-platform.outputs.should_build == 'true' && matrix.config.name == 'Windows (1)' && steps.determine-build.outputs.build_required == 'true'
         shell: bash
         timeout-minutes: 60
         run: |
@@ -301,7 +319,7 @@ jobs:
           echo "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v13.0\\bin" >> $GITHUB_PATH
 
       - name: Install Cuda 12.4 on Windows (2)
-        if: steps.check-platform.outputs.should_build == 'true' && matrix.config.name == 'Windows (2)' && steps.cache-binaries.outputs.cache-hit != 'true'
+        if: steps.check-platform.outputs.should_build == 'true' && matrix.config.name == 'Windows (2)' && steps.determine-build.outputs.build_required == 'true'
         uses: Jimver/cuda-toolkit@v0.2.15
         with:
           cuda: '12.4.0'
@@ -310,21 +328,21 @@ jobs:
           use-local-cache: false
 
       - name: Install Cuda 13.0 on Ubuntu (1)
-        if: steps.check-platform.outputs.should_build == 'true' && matrix.config.name == 'Ubuntu (1)' && steps.cache-binaries.outputs.cache-hit != 'true'
+        if: steps.check-platform.outputs.should_build == 'true' && matrix.config.name == 'Ubuntu (1)' && steps.determine-build.outputs.build_required == 'true'
         uses: Jimver/cuda-toolkit@v0.2.27
         with:
           cuda: '13.0.0'
           method: 'network'
 
       - name: Install Cuda 12.4 on Ubuntu (2)
-        if: steps.check-platform.outputs.should_build == 'true' && matrix.config.name == 'Ubuntu (2)' && steps.cache-binaries.outputs.cache-hit != 'true'
+        if: steps.check-platform.outputs.should_build == 'true' && matrix.config.name == 'Ubuntu (2)' && steps.determine-build.outputs.build_required == 'true'
         uses: Jimver/cuda-toolkit@v0.2.15
         with:
           cuda: '12.4.0'
           method: 'network'
 
       - name: Install Vulkan SDK on Windows (1)
-        if: steps.check-platform.outputs.should_build == 'true' && matrix.config.name == 'Windows (1)' && steps.cache-binaries.outputs.cache-hit != 'true'
+        if: steps.check-platform.outputs.should_build == 'true' && matrix.config.name == 'Windows (1)' && steps.determine-build.outputs.build_required == 'true'
         shell: powershell
         env:
           VULKAN_VERSION: 1.4.313.2
@@ -335,7 +353,7 @@ jobs:
           Add-Content $env:GITHUB_PATH "C:\VulkanSDK\${env:VULKAN_VERSION}\bin"
 
       - name: Install Vulkan SDK on Ubuntu
-        if: steps.check-platform.outputs.should_build == 'true' && matrix.config.name == 'Ubuntu (1)' && steps.cache-binaries.outputs.cache-hit != 'true'
+        if: steps.check-platform.outputs.should_build == 'true' && matrix.config.name == 'Ubuntu (1)' && steps.determine-build.outputs.build_required == 'true'
         run: |
           sudo bash .github/scripts/setup-apt-mirror.sh || true
           wget -qO- https://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo tee /etc/apt/trusted.gpg.d/lunarg.asc
@@ -344,14 +362,13 @@ jobs:
           sudo apt install vulkan-sdk
 
       - name: Install dependencies on macOS
-        if: steps.check-platform.outputs.should_build == 'true' && matrix.config.name == 'macOS' && steps.cache-binaries.outputs.cache-hit != 'true'
+        if: steps.check-platform.outputs.should_build == 'true' && startsWith(matrix.config.platform_group, 'macos') && steps.determine-build.outputs.build_required == 'true'
         run: |
           brew install cmake ninja
           alias make=cmake
 
       - name: Setup & Build
-        if: steps.check-platform.outputs.should_build == 'true' && steps.cache-binaries.outputs.cache-hit != 'true'
-        id: build
+        if: steps.check-platform.outputs.should_build == 'true' && steps.determine-build.outputs.build_required == 'true'
         shell: bash
         timeout-minutes: 300
         env:
@@ -643,7 +660,7 @@ jobs:
           path: llama
 
       - name: Install dependencies on macOS
-        if: matrix.config.name == 'macOS'
+        if: startsWith(matrix.config.os, 'macos')
         run: |
           brew install cmake ninja
           alias make=cmake

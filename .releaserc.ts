@@ -97,7 +97,10 @@ const config: Omit<GlobalConfig, "repositoryUrl" | "tagFormat"> = {
         ["@semantic-release/github", githubPluginConfig],
         ["@semantic-release/exec", {
             publishCmd: "echo \"${nextRelease.version}\" > .semanticRelease.npmPackage.deployedVersion.txt"
-        }]
+        }],
+        ["@semantic-release/git", {
+            "assets": ["CHANGELOG.md", "package.json"]
+        }],
     ]
 };
 
