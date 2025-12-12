@@ -1,6 +1,6 @@
 {
   "name": "@isdk/llama-node",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "description": "Low-level Node.js bindings for llama.cpp. Core library for running LLM models locally with native performance and hardware acceleration support.",
   "homepage": "https://github.com/isdk/llama-node",
   "main": "./dist/index.js",
@@ -73,7 +73,8 @@
     "docs:generateTypedoc": "typedoc && rimraf ./docs/api/index.md ./docs/api/globals.md ./docs/api/functions/LlamaText.md",
     "docs:dev": "pnpm run docs:generateTypedoc && vitepress dev --cors",
     "docs:build": "pnpm run docs:generateTypedoc && vitepress build",
-    "docs:preview": "pnpm run docs:generateTypedoc && vitepress preview"
+    "docs:preview": "pnpm run docs:generateTypedoc && vitepress preview",
+    "postinstall": "node ./dist/cli/cli.js postinstall"
   },
   "repository": {
     "type": "git",
@@ -141,9 +142,9 @@
     "@nolebase/vitepress-plugin-og-image": "^2.17.0",
     "@resvg/resvg-js": "^2.6.2",
     "@semantic-release/exec": "^7.1.0",
+    "@semantic-release/git": "10.0.1",
     "@semantic-release/github": "12.0.2",
     "@semantic-release/npm": "13.1.2",
-    "@semantic-release/git": "10.0.1",
     "@shikijs/vitepress-twoslash": "^3.4.0",
     "@stylistic/eslint-plugin": "^4.2.0",
     "@types/async-retry": "^1.4.9",
@@ -223,18 +224,18 @@
     }
   },
   "optionalDependencies": {
-    "@isdk/llama-node-linux-arm64": "2.0.2",
-    "@isdk/llama-node-linux-armv7l": "2.0.2",
-    "@isdk/llama-node-linux-x64": "2.0.2",
-    "@isdk/llama-node-linux-x64-cuda": "2.0.2",
-    "@isdk/llama-node-linux-x64-cuda-ext": "2.0.2",
-    "@isdk/llama-node-linux-x64-vulkan": "2.0.2",
-    "@isdk/llama-node-mac-arm64-metal": "2.0.2",
-    "@isdk/llama-node-mac-x64": "2.0.2",
-    "@isdk/llama-node-win-arm64": "2.0.2",
-    "@isdk/llama-node-win-x64": "2.0.2",
-    "@isdk/llama-node-win-x64-cuda": "2.0.2",
-    "@isdk/llama-node-win-x64-cuda-ext": "2.0.2",
-    "@isdk/llama-node-win-x64-vulkan": "2.0.2"
+    "@isdk/llama-node-linux-arm64": "2.0.3",
+    "@isdk/llama-node-linux-armv7l": "2.0.3",
+    "@isdk/llama-node-linux-x64": "2.0.3",
+    "@isdk/llama-node-linux-x64-cuda": "2.0.3",
+    "@isdk/llama-node-linux-x64-cuda-ext": "2.0.3",
+    "@isdk/llama-node-linux-x64-vulkan": "2.0.3",
+    "@isdk/llama-node-mac-arm64-metal": "2.0.3",
+    "@isdk/llama-node-mac-x64": "2.0.3",
+    "@isdk/llama-node-win-arm64": "2.0.3",
+    "@isdk/llama-node-win-x64": "2.0.3",
+    "@isdk/llama-node-win-x64-cuda": "2.0.3",
+    "@isdk/llama-node-win-x64-cuda-ext": "2.0.3",
+    "@isdk/llama-node-win-x64-vulkan": "2.0.3"
   }
 }
